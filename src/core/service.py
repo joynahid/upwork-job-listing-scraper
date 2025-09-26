@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any
 
 from botasaurus_driver import Driver
-from ..realtimedb import JobData, RealtimeJobDatabase, FailedJobExtraction
+from ..realtimedb import JobData, RealtimeJobDatabase
 
 from ..schemas.input import ActorInput
 from .extraction_scripts import JOB_LISTING_EXTRACTION_SCRIPT, JOB_DETAIL_SCRIPT
@@ -28,9 +28,23 @@ class UpworkJobService:
         self.proxy_url: str | None = None
         self.rt_db: RealtimeJobDatabase = rt_db
         self.data_store = data_store
+        self._initialized = False
+
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.cleanup()
+        return False  # Don't suppress exceptions
 
     async def initialize(self) -> None:
         """Initialize Botasaurus driver and proxy configuration."""
+        if self._initialized:
+            return
+            
         logger.info("Initializing Botasaurus driver")
         logger.info(
             "Configuration: max_jobs=%s, debug_mode=%s",
@@ -38,34 +52,47 @@ class UpworkJobService:
             self.config.debug_mode,
         )
 
-        # Get proxy URL from environment
-        self.proxy_url = os.getenv('PROXY_URL')
-        if self.proxy_url:
-            logger.info("Using HTTP proxy: %s", self.proxy_url)
-        else:
-            logger.info("No proxy configured - running without proxy")
+        try:
+            # Get proxy URL from environment
+            self.proxy_url = os.getenv('PROXY_URL')
+            if self.proxy_url:
+                logger.info("Using HTTP proxy: %s", self.proxy_url)
+            else:
+                logger.info("No proxy configured - running without proxy")
 
-        driver_kwargs: dict[str, Any] = {
-            "headless": False,
-            "wait_for_complete_page_load": True,
-            "lang": "en-US,en",
-        }
+            driver_kwargs: dict[str, Any] = {
+                "headless": False,
+                "wait_for_complete_page_load": True,
+                "lang": "en-US,en",
+            }
 
-        if self.proxy_url:
-            driver_kwargs["proxy"] = self.proxy_url
+            if self.proxy_url:
+                driver_kwargs["proxy"] = self.proxy_url
 
-        logger.info("Starting Botasaurus driver with headless=%s", driver_kwargs["headless"])
-        self.driver = Driver(**driver_kwargs)
+            logger.info("Starting Botasaurus driver with headless=%s", driver_kwargs["headless"])
+            
+            # Check for cancellation before creating driver
+            current_task = asyncio.current_task()
+            if current_task and current_task.cancelled():
+                raise asyncio.CancelledError()
+            
+            self.driver = Driver(**driver_kwargs)
 
-        if not self.config.debug_mode:
-            try:
-                self.driver.enable_human_mode()
-                logger.info("Enabled Botasaurus human mode to mimic user interactions")
-            except Exception as exc:  # pragma: no cover - best effort
-                logger.debug("Unable to enable human mode: %s", exc)
+            if not self.config.debug_mode:
+                try:
+                    self.driver.enable_human_mode()
+                    logger.info("Enabled Botasaurus human mode to mimic user interactions")
+                except Exception as exc:  # pragma: no cover - best effort
+                    logger.debug("Unable to enable human mode: %s", exc)
 
-        search_urls_count = len(self.config.build_search_urls())
-        logger.info("Ready to scrape %s search URLs", search_urls_count)
+            search_urls_count = len(self.config.build_search_urls())
+            logger.info("Ready to scrape %s search URLs", search_urls_count)
+            self._initialized = True
+            
+        except Exception:
+            # Cleanup on initialization failure
+            await self.cleanup()
+            raise
 
     async def run_scraping(self, search_urls: list[str]) -> None:
         """Run scraping workflow using Botasaurus."""
@@ -73,6 +100,12 @@ class UpworkJobService:
             raise RuntimeError("Driver not initialized. Call initialize() before run_scraping().")
 
         for index, url in enumerate(search_urls, start=1):
+            # Check if task is cancelled (proper asyncio way)
+            current_task = asyncio.current_task()
+            if current_task and current_task.cancelled():
+                logger.info("Task cancelled - stopping scraping")
+                raise asyncio.CancelledError()
+                
             if len(self.comprehensive_jobs_found) >= self.config.max_jobs:
                 logger.info("Reached max_jobs limit; stopping further processing")
                 break
@@ -82,6 +115,9 @@ class UpworkJobService:
 
             try:
                 await self._process_search_url(url)
+            except asyncio.CancelledError:
+                logger.info("Scraping cancelled during URL processing")
+                raise  # Re-raise to properly propagate cancellation
             except Exception as exc:
                 logger.error("Failed to process search URL %s: %s", url, exc, exc_info=True)
 
@@ -89,10 +125,16 @@ class UpworkJobService:
                 logger.info("Max jobs reached after processing search URL %s", url)
                 break
 
+            # Check for cancellation before delay
+            current_task = asyncio.current_task()
+            if current_task and current_task.cancelled():
+                logger.info("Task cancelled - skipping delay and stopping")
+                raise asyncio.CancelledError()
+                
             await self._apply_random_delay()
 
         logger.info(
-            "Botasaurus scraping session finished with %s jobs", len(self.comprehensive_jobs_found)
+            "🏁 Real-time job scraping session finished with %s jobs saved individually", len(self.comprehensive_jobs_found)
         )
 
     async def _process_search_url(self, url: str) -> None:
@@ -100,7 +142,7 @@ class UpworkJobService:
         if not self.driver:
             raise RuntimeError("Driver not initialized")
 
-        self.driver.get(url, bypass_cloudflare=True, wait=3, timeout=120)
+        self.driver.get(url, bypass_cloudflare=True, wait=10, timeout=120)
         try:
             self.driver.detect_and_bypass_cloudflare()
         except Exception as exc:  # pragma: no cover - best effort
@@ -176,112 +218,109 @@ class UpworkJobService:
             new_job_urls.append(job_url)
 
         logger.info(
-            "📊 Found %s unique job_ids, %s new URLs to process (total processed=%s)",
+            "📊 Found %s unique job_ids, %s new URLs to process individually in real-time (total processed=%s)",
             len(seen_job_ids),
             len(new_job_urls),
             len(self.comprehensive_jobs_found),
         )
 
-        # Process job URLs in batches to get comprehensive data
+        # Process job URLs individually in real-time
         if new_job_urls:
-            await self._process_job_urls_in_batches(
+            await self._process_job_urls_individually(
                 new_job_urls[: self.config.max_jobs - len(self.comprehensive_jobs_found)]
             )
 
         await self._apply_random_delay()
 
-    async def _process_job_urls_in_batches(self, job_urls: list[str]) -> None:
-        """Process job URLs in batches of 5 tabs concurrently to get comprehensive data."""
-        batch_size = 5
+    async def _process_job_urls_individually(self, job_urls: list[str]) -> None:
+        """Process job URLs one by one in real-time to save jobs immediately."""
         total_jobs = len(job_urls)
 
-        logger.info(f"Processing {total_jobs} job URLs in batches of {batch_size}")
+        logger.info(f"Processing {total_jobs} job URLs individually in real-time")
 
-        for i in range(0, total_jobs, batch_size):
-            batch = job_urls[i : i + batch_size]
-            batch_num = (i // batch_size) + 1
-            total_batches = (total_jobs + batch_size - 1) // batch_size
-
-            # Filter batch to respect max_jobs limit
+        for i, job_url in enumerate(job_urls, 1):
+            # Check if we've reached the max jobs limit
             remaining_slots = self.config.max_jobs - len(self.comprehensive_jobs_found)
-            batch = batch[:remaining_slots]
-
-            if not batch:
+            if remaining_slots <= 0:
+                logger.info("Reached max_jobs limit, stopping individual processing")
                 break
 
-            logger.info(f"Processing batch {batch_num}/{total_batches} with {len(batch)} job URLs")
+            # Check for cancellation before processing each job
+            current_task = asyncio.current_task()
+            if current_task and current_task.cancelled():
+                logger.info("Task cancelled during individual job processing")
+                raise asyncio.CancelledError()
 
-            # Open all tabs in parallel first
-            logger.debug(f"Opening {len(batch)} tabs in parallel")
-            tab_url_pairs = await self._open_tabs_in_parallel(batch)
+            logger.info(f"Processing job {i}/{total_jobs}: {job_url}")
 
-            if not tab_url_pairs:
-                logger.warning(f"No tabs were opened successfully for batch {batch_num}")
-                continue
-
-            # Process all tabs concurrently
-            logger.debug(f"Processing {len(tab_url_pairs)} tabs concurrently")
-            tasks = []
-            for tab, job_url in tab_url_pairs:
-                tasks.append(self._extract_and_push_comprehensive_job_from_tab(tab, job_url))
-
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
-                # Count successful vs failed jobs in this batch
+            try:
+                # Process single job URL and save immediately
+                await self._process_single_job_url(job_url)
+                
+                # Log progress after each job
                 successful_count = len([job for job in self.comprehensive_jobs_found if 'error' not in job or job.get('error') is None])
                 failed_count = len(self.comprehensive_jobs_found) - successful_count
                 
-                logger.info("Completed batch %d/%d - Successful: %d, Failed: %d, Total processed: %d", 
-                           batch_num, total_batches, successful_count, failed_count, len(self.comprehensive_jobs_found))
+                logger.info("✅ Completed job %d/%d - Total successful: %d, Total failed: %d", 
+                           i, total_jobs, successful_count, failed_count)
 
-                # Add delay between batches to be respectful
-                if i + batch_size < total_jobs:  # Don't delay after the last batch
-                    await asyncio.sleep(2)
-
-    async def _open_tabs_in_parallel(self, job_urls: list[str]) -> list[tuple[Any, str]]:
-        """Open multiple tabs in parallel and return list of (tab, url) pairs."""
-        if not self.driver:
-            return []
-
-        tab_url_pairs = []
-
-        # Create tasks to open all tabs simultaneously
-        async def open_single_tab(url: str) -> tuple[Any, str] | None:
-            try:
-                # Add small staggered delay to avoid overwhelming the browser
-                await asyncio.sleep(random.uniform(0.05, 0.2))
-
-                logger.debug(f"Opening tab for: {url}")
-                tab = self.driver.open_link_in_new_tab(
-                    url, bypass_cloudflare=True, wait=3, timeout=120
-                )
-                return (tab, url)
+            except asyncio.CancelledError:
+                logger.info("Individual job processing cancelled")
+                raise
             except Exception as exc:
-                logger.error(f"Failed to open tab for {url}: {exc}")
-                return None
+                logger.error("Failed to process individual job %s: %s", job_url, exc, exc_info=True)
 
-        # Execute all tab opening operations concurrently
-        tasks = [open_single_tab(url) for url in job_urls]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+            # Add small delay between individual jobs to be respectful
+            if i < total_jobs:  # Don't delay after the last job
+                await asyncio.sleep(1)
 
-        # Filter successful results
-        for result in results:
-            if isinstance(result, tuple) and result is not None:
-                tab_url_pairs.append(result)
-            elif isinstance(result, Exception):
-                logger.error(f"Tab opening task failed: {result}")
+    async def _process_single_job_url(self, job_url: str) -> None:
+        """Process a single job URL and save it immediately."""
+        if not self.driver:
+            raise RuntimeError("Driver not initialized")
 
-        logger.info(f"Successfully opened {len(tab_url_pairs)}/{len(job_urls)} tabs in parallel")
-        return tab_url_pairs
+        try:
+            logger.debug(f"Opening job URL: {job_url}")
+            
+            # Open the job URL in a new tab
+            tab = self.driver.open_link_in_new_tab(
+                job_url, bypass_cloudflare=True, wait=3, timeout=120
+            )
+            
+            # Process the job and save immediately
+            await self._extract_and_push_comprehensive_job_from_tab(tab, job_url)
+            
+        except Exception as exc:
+            logger.error(f"Failed to process single job URL {job_url}: {exc}", exc_info=True)
+            
+            # Record the failed extraction
+            from ..realtimedb import FailedJobExtraction
+            failed_job = FailedJobExtraction(
+                url=job_url,
+                error_message=f"Single job processing error: {exc}",
+                raw_data=None
+            )
+            self.rt_db.record_failed_extraction(failed_job)
+            
+            # Still store a minimal fallback entry for compatibility
+            fallback = {
+                "type": "job",
+                "url": job_url,
+                "error": str(exc),
+                "processed_at": datetime.now().isoformat(),
+                "extraction_status": "failed"
+            }
+            if self.data_store:
+                await self.data_store.push_data(fallback)
 
     async def _extract_and_push_comprehensive_job_from_tab(self, tab: Any, job_url: str) -> None:
-        """Extract comprehensive job information from a pre-opened tab."""
+        """Extract comprehensive job information from a pre-opened tab and save immediately."""
         if not self.driver:
             return
 
         try:
             # Switch to the specific tab
-            logger.debug(f"Switching to tab for job URL: {job_url}")
+            logger.info(f"🔄 Processing job in real-time: {job_url}")
             self.driver.switch_to_tab(tab)
 
             try:
@@ -298,6 +337,7 @@ class UpworkJobService:
                 logger.debug("Job title element not found immediately on detail page")
 
             # Extract comprehensive job details
+            logger.debug(f"🔍 Extracting job details from: {job_url}")
             detailed_info = self._extract_job_details()
 
             if detailed_info and isinstance(detailed_info, dict):
@@ -309,23 +349,28 @@ class UpworkJobService:
                     clean_job_data.set_url(job_url)
                     logger.info("🔗 JobData object created with job_id: '%s'", clean_job_data.job_id)
 
-                    # Mark job as seen in RocksDB
+                    # Mark job as seen in RocksDB immediately
                     self.rt_db.do_seen(clean_job_data)
                     logger.info("✅ Marked job %s as SEEN in database", clean_job_data.job_id[:20] + "..." if len(clean_job_data.job_id or "") > 20 else clean_job_data.job_id)
 
                     # Store for tracking
                     self.comprehensive_jobs_found.append(clean_job_data.model_dump())
 
-                    # Push clean data
+                    # Push clean data immediately to data store
                     if self.data_store:
                         await self.data_store.push_data(clean_job_data.model_dump())
-                    logger.info("Successfully processed job: %s", clean_job_data.title or clean_job_data.job_id or job_url)
+                        logger.info("💾 Job saved to data store in real-time: %s", clean_job_data.title or clean_job_data.job_id or job_url)
+                    else:
+                        logger.warning("No data store configured - job not persisted")
+                    
+                    logger.info("🎉 Successfully processed and saved job: %s", clean_job_data.title or clean_job_data.job_id or job_url)
                     
                 except Exception as validation_exc:
                     # Handle validation errors gracefully - data doesn't meet JobData requirements
-                    logger.warning("Job data validation failed for %s: %s", job_url, validation_exc)
+                    logger.warning("❌ Job data validation failed for %s: %s", job_url, validation_exc)
                     
                     # Record the failed extraction with detailed information
+                    from ..realtimedb import FailedJobExtraction
                     failed_job = FailedJobExtraction(
                         url=job_url,
                         error_message=f"Data validation failed: {validation_exc}",
@@ -337,7 +382,8 @@ class UpworkJobService:
                     return
             else:
                 # No data extracted at all
-                logger.warning("No data extracted for job URL: %s", job_url)
+                logger.warning("⚠️ No data extracted for job URL: %s", job_url)
+                from ..realtimedb import FailedJobExtraction
                 failed_job = FailedJobExtraction(
                     url=job_url,
                     error_message="No data could be extracted from job page",
@@ -346,9 +392,10 @@ class UpworkJobService:
                 self.rt_db.record_failed_extraction(failed_job)
 
         except Exception as exc:
-            logger.error("Failed to extract job for %s: %s", job_url, exc, exc_info=True)
+            logger.error("💥 Failed to extract job for %s: %s", job_url, exc, exc_info=True)
             
             # Record the failed extraction
+            from ..realtimedb import FailedJobExtraction
             failed_job = FailedJobExtraction(
                 url=job_url,
                 error_message=f"Extraction error: {exc}",
@@ -368,7 +415,7 @@ class UpworkJobService:
                 await self.data_store.push_data(fallback)
         finally:
             try:
-                logger.debug(f"Closing tab for job URL: {job_url}")
+                logger.debug(f"🔒 Closing tab for job URL: {job_url}")
                 tab.close()
             except Exception as close_exc:  # pragma: no cover - best effort
                 logger.debug("Failed to close detail tab: %s", close_exc)
@@ -423,84 +470,76 @@ class UpworkJobService:
         """Apply a random delay between configured min and max."""
         delay = random.uniform(self.config.delay_min, self.config.delay_max)
         logger.debug("Sleeping for %.2f seconds to mimic human behaviour", delay)
-        await asyncio.sleep(delay)
+        
+        # Use asyncio.sleep which respects cancellation
+        try:
+            await asyncio.sleep(delay)
+        except asyncio.CancelledError:
+            logger.debug("Delay interrupted by cancellation")
+            raise
 
     async def cleanup(self) -> None:
-        """Clean up resources with comprehensive error handling."""
-        logger.info("Starting comprehensive cleanup process...")
-        cleanup_errors = []
+        """Clean up resources with proper async handling."""
+        if not self._initialized:
+            return
+            
+        logger.info("Starting service cleanup...")
 
         # Step 1: Close browser tabs and driver
         if self.driver:
             try:
                 logger.info("Attempting to close Botasaurus driver...")
 
-                # Try to close all tabs first with timeout
+                # Try to close all tabs first
                 try:
-                    # Give tabs a reasonable time to close
                     await asyncio.wait_for(
                         asyncio.get_event_loop().run_in_executor(
                             None, self.driver.close_all_tabs
                         ), 
-                        timeout=10.0
+                        timeout=5.0
                     )
                     logger.debug("All tabs closed successfully")
                 except asyncio.TimeoutError:
-                    logger.warning("Tab closure timed out after 10 seconds")
+                    logger.warning("Tab closure timed out")
                 except Exception as exc:
                     logger.debug("Failed to close all tabs: %s", exc)
-                    cleanup_errors.append(f"Tab closure failed: {exc}")
 
-                # Close the driver with timeout
+                # Close the driver
                 try:
                     await asyncio.wait_for(
                         asyncio.get_event_loop().run_in_executor(
                             None, self.driver.close
                         ), 
-                        timeout=15.0
+                        timeout=10.0
                     )
                     logger.info("Driver closed successfully")
                 except asyncio.TimeoutError:
-                    logger.warning("Driver close timed out after 15 seconds, attempting force quit")
+                    logger.warning("Driver close timed out, attempting quit")
                     try:
                         self.driver.quit()
-                        logger.info("Driver force quit completed")
+                        logger.info("Driver quit completed")
                     except Exception as quit_exc:
-                        logger.warning("Force quit also failed: %s", quit_exc)
-                        cleanup_errors.append(f"Driver force quit failed: {quit_exc}")
+                        logger.warning("Driver quit failed: %s", quit_exc)
                 except Exception as exc:
-                    logger.warning("Driver close encountered an issue: %s", exc)
-                    cleanup_errors.append(f"Driver close failed: {exc}")
-                    
-                    # Force cleanup if normal close fails
+                    logger.warning("Driver close failed: %s", exc)
                     try:
-                        logger.info("Attempting force cleanup...")
                         self.driver.quit()
-                        logger.info("Force cleanup completed")
+                        logger.info("Fallback quit completed")
                     except Exception as quit_exc:
-                        logger.warning("Force quit also failed: %s", quit_exc)
-                        cleanup_errors.append(f"Force quit failed: {quit_exc}")
+                        logger.warning("Fallback quit failed: %s", quit_exc)
 
             except Exception as driver_exc:
-                logger.error("Unexpected error during driver cleanup: %s", driver_exc)
-                cleanup_errors.append(f"Driver cleanup error: {driver_exc}")
+                logger.error("Driver cleanup error: %s", driver_exc)
             finally:
                 self.driver = None
 
-        # Step 2: Kill any remaining Chrome processes (with safety checks)
-        await self._cleanup_hanging_processes(cleanup_errors)
+        # Step 2: Clean up any hanging processes
+        await self._cleanup_hanging_processes()
+        
+        self._initialized = False
+        logger.info("Service cleanup completed")
 
-        # Step 3: Close database connection (moved to main.py for proper order)
-        # Database cleanup is now handled in main.py to ensure proper shutdown order
-
-        # Step 4: Report cleanup status
-        if cleanup_errors:
-            logger.warning("Cleanup completed with %d errors: %s", 
-                         len(cleanup_errors), "; ".join(cleanup_errors))
-        else:
-            logger.info("Service cleanup completed successfully")
-
-    async def _cleanup_hanging_processes(self, cleanup_errors: list) -> None:
+    async def _cleanup_hanging_processes(self) -> None:
         """Clean up any hanging Chrome processes with safety checks."""
         try:
             import os
@@ -552,10 +591,8 @@ class UpworkJobService:
                 logger.debug("No hanging Chrome processes found")
             except asyncio.TimeoutError:
                 logger.warning("Process cleanup timed out")
-                cleanup_errors.append("Process cleanup timeout")
 
         except Exception as cleanup_exc:
             logger.debug("Process cleanup failed: %s", cleanup_exc)
-            cleanup_errors.append(f"Process cleanup failed: {cleanup_exc}")
 
         logger.info("Service cleanup completed")

@@ -56,6 +56,9 @@ apify_storage/
 node_modules/
 .apify/
 
+# Database files
+sqlite_data/
+
 # Logs and debug files
 *.log
 logs/

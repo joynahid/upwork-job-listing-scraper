@@ -87,13 +87,17 @@ class SimpleDataStore:
 
 async def main() -> None:
     """Main entry point for the Upwork job listing scraper."""
-    # Configure logging
+    # Configure logging with websocket error filtering
     log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
     logging.basicConfig(
         level=getattr(logging, log_level), 
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     logger = logging.getLogger(__name__)
+
+    # Filter out excessive websocket error logs to prevent spam
+    websocket_logger = logging.getLogger('websocket')
+    websocket_logger.setLevel(logging.WARNING)  # Only show warnings and above
 
     # Initialize variables for cleanup
     service = None
@@ -141,21 +145,20 @@ async def main() -> None:
         service = UpworkJobService(actor_input, rt_db, data_store)
 
         try:
-            # Initialize service
-            await service.initialize()
+            # Use async context manager for proper resource management
+            async with service:
+                # Build search URLs from parameters
+                search_urls = actor_input.build_search_urls()
+                logger.info(f"Generated {len(search_urls)} search URLs")
 
-            # Build search URLs from parameters
-            search_urls = actor_input.build_search_urls()
-            logger.info(f"Generated {len(search_urls)} search URLs")
+                if actor_input.debug_mode:
+                    for i, url in enumerate(search_urls, 1):
+                        logger.info(f"URL {i}: {url}")
 
-            if actor_input.debug_mode:
-                for i, url in enumerate(search_urls, 1):
-                    logger.info(f"URL {i}: {url}")
+                logger.info("Starting job scraping...")
 
-            logger.info("Starting job scraping...")
-
-            # Run the scraping
-            await service.run_scraping(search_urls)
+                # Run the scraping - cancellation will propagate naturally
+                await service.run_scraping(search_urls)
 
             # Log summary
             total_jobs = len(service.comprehensive_jobs_found)
@@ -207,16 +210,8 @@ async def main() -> None:
         logger.error(f"Critical application error: {e}", exc_info=True)
         raise
     finally:
-        # Clean up resources in reverse order of initialization
+        # Clean up database and data store (service cleanup handled by async context manager)
         logger.info("Starting cleanup process...")
-        
-        # Clean up service (includes browser/driver cleanup)
-        if service:
-            try:
-                await service.cleanup()
-                logger.info("Service cleanup completed")
-            except Exception as cleanup_error:
-                logger.error(f"Service cleanup failed: {cleanup_error}")
 
         # Clean up database connection
         if rt_db:

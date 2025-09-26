@@ -67,16 +67,41 @@ class SQLiteJobTracker:
         self._initialize_db()
 
     def _initialize_db(self) -> None:
-        """Initialize SQLite database with proper setup."""
+        """Initialize SQLite database with proper setup for real-time updates."""
         try:
-            # Create SQLAlchemy engine
-            self.engine = create_engine(f"sqlite:///{self.db_file}", echo=False)
+            # Create SQLAlchemy engine with WAL mode and real-time settings
+            connection_string = (
+                f"sqlite:///{self.db_file}"
+                "?cache=shared"
+                "&check_same_thread=false"
+            )
+            
+            self.engine = create_engine(
+                connection_string, 
+                echo=False,
+                pool_pre_ping=True,
+                pool_recycle=300,
+                connect_args={
+                    "check_same_thread": False,
+                    "timeout": 20
+                }
+            )
+
+            # Configure WAL mode and other settings for real-time updates
+            with self.engine.connect() as conn:
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA synchronous=NORMAL") 
+                conn.execute("PRAGMA cache_size=1000")
+                conn.execute("PRAGMA foreign_keys=ON")
+                conn.execute("PRAGMA wal_autocheckpoint=100")  # Auto-checkpoint every 100 pages
+                conn.commit()
+                logger.info("SQLite configured with WAL mode for real-time updates")
 
             # Create tables
             Base.metadata.create_all(self.engine)
 
-            # Create session factory
-            self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+            # Create session factory with immediate flush for real-time updates
+            self.SessionLocal = sessionmaker(autocommit=False, autoflush=True, bind=self.engine)
 
             logger.info("SQLite database initialized successfully at %s", self.db_file)
 
@@ -212,8 +237,14 @@ class SQLiteJobTracker:
                 )
                 session.add(history_entry)
 
+                # Commit immediately for real-time updates
                 session.commit()
-                logger.debug("Marked job %s as seen", job_id)
+                
+                # Force WAL checkpoint to ensure data is immediately visible to readers
+                session.execute("PRAGMA wal_checkpoint(PASSIVE)")
+                session.commit()
+                
+                logger.info("✅ Job %s committed to database in real-time", job_id[:20] + "..." if len(job_id) > 20 else job_id)
 
         except Exception as exc:
             logger.error("Error marking job %s as seen: %s", job_id, exc)
@@ -348,9 +379,15 @@ class SQLiteJobTracker:
                 )
                 
                 session.add(failed_entry)
+                
+                # Commit immediately for real-time updates
                 session.commit()
                 
-                logger.info("Recorded failed job extraction for URL: %s", job_url)
+                # Force WAL checkpoint to ensure data is immediately visible to readers
+                session.execute("PRAGMA wal_checkpoint(PASSIVE)")
+                session.commit()
+                
+                logger.info("✅ Failed job extraction recorded in real-time for URL: %s", job_url)
             
         except Exception as exc:
             logger.error("Error recording failed job: %s", exc)

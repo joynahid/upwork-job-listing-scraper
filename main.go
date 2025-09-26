@@ -47,8 +47,8 @@ func NewJobAPI() (*JobAPI, error) {
 		return nil, fmt.Errorf("API_KEY environment variable is required")
 	}
 
-	// Open SQLite database with proper connection settings
-	db, err := sql.Open("sqlite3", dbPath+"?cache=shared&mode=ro")
+	// Open SQLite database with WAL mode for better concurrent access
+	db, err := sql.Open("sqlite3", dbPath+"?cache=shared&mode=rwc&_journal_mode=WAL&_synchronous=NORMAL&_cache_size=1000&_foreign_keys=1")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %v", err)
 	}
@@ -86,6 +86,8 @@ func (api *JobAPI) refreshCache() error {
 		log.Printf("❌ Database ping failed: %v", err)
 	}
 
+	log.Printf("🔍 Refreshing cache from database...")
+
 	// Query latest jobs from SQLite
 	query := `
 		SELECT job_id, data, last_visited_at 
@@ -93,6 +95,12 @@ func (api *JobAPI) refreshCache() error {
 		WHERE entry_type = 'latest'
 		ORDER BY last_visited_at DESC
 	`
+
+	// Execute a dummy query to ensure connection is fresh
+	_, err := api.db.Exec("PRAGMA wal_checkpoint(PASSIVE);")
+	if err != nil {
+		log.Printf("⚠️ WAL checkpoint failed: %v", err)
+	}
 
 	rows, err := api.db.Query(query)
 	if err != nil {
@@ -139,16 +147,18 @@ func (api *JobAPI) refreshCache() error {
 	api.lastUpdated = time.Now()
 	api.cacheMutex.Unlock()
 
-	// Only log if job count changed significantly
+	// Always log cache updates for debugging
 	if len(newCache) != oldCount {
 		log.Printf("✅ Cache updated: %d jobs (was %d)", len(newCache), oldCount)
+	} else {
+		log.Printf("🔄 Cache refreshed: %d jobs (no change)", len(newCache))
 	}
 	return nil
 }
 
 func (api *JobAPI) startBackgroundWorker() {
-	ticker := time.NewTicker(1 * time.Second)
-	logTicker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(500 * time.Millisecond) // More aggressive refresh for real-time updates
+	logTicker := time.NewTicker(30 * time.Second)    // More frequent status logs for debugging
 
 	go func() {
 		defer ticker.Stop()
@@ -272,7 +282,7 @@ func main() {
 
 	// Start background worker
 	api.startBackgroundWorker()
-	log.Println("🔄 Background worker started (1 second refresh interval, 5 minute status logs)")
+	log.Println("🔄 Background worker started (500ms refresh interval, 30 second status logs)")
 
 	// Log initial cache state
 	api.cacheMutex.RLock()
