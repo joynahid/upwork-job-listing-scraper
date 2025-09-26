@@ -41,7 +41,7 @@ class UpworkJobService:
         # Get proxy URL from environment
         self.proxy_url = os.getenv('PROXY_URL')
         if self.proxy_url:
-            logger.info("Using HTTP proxy from PROXY_URL environment variable")
+            logger.info("Using HTTP proxy: %s", self.proxy_url)
         else:
             logger.info("No proxy configured - running without proxy")
 
