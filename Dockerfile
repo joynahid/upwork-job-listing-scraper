@@ -56,9 +56,6 @@ RUN apt-get update && apt-get install -y wget
 RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 RUN apt-get update && apt-get install -y -f ./google-chrome-stable_current_amd64.deb
 
-# Create a non-root user
-RUN useradd -m -u 1000 -s /bin/bash appuser
-
 # Set working directory
 WORKDIR /app
 
@@ -88,29 +85,16 @@ RUN python3 -m compileall -q src/
 # Create storage directory
 RUN mkdir -p /app/storage
 
-# Create all necessary directories and set comprehensive permissions
-RUN mkdir -p /app/.cache/uv /app/.npm /app/.npm-global /app/storage /app/logs /app/sqlite_data && \
-    chown -R 1000:1000 /app && \
-    chmod -R 755 /app && \
-    if [ -d "/app/.venv" ]; then chown -R 1000:1000 /app/.venv && chmod -R 755 /app/.venv; fi && \
-    # Ensure executable permissions for Python and binaries in venv
-    if [ -d "/app/.venv/bin" ]; then chmod -R 755 /app/.venv/bin; fi && \
-    # Set permissions for common system directories that might be accessed
-    chmod 1777 /tmp && \
-    chown -R 1000:1000 /home/appuser && chmod -R 755 /home/appuser
+# Create all necessary directories (running as root, no permission issues)
+RUN mkdir -p /app/.cache/uv /app/.npm /app/.npm-global /app/storage /app/logs /app/sqlite_data
 
-# Set runtime UV environment variables for non-root user
+# Set runtime UV environment variables for root user
 ENV UV_CACHE_DIR=/app/.cache/uv
 ENV UV_NO_CACHE=0
 
-# Set npm environment variables for non-root user
+# Set npm environment variables for root user
 ENV NPM_CONFIG_CACHE=/app/.npm
 ENV NPM_CONFIG_PREFIX=/app/.npm-global
-
-# Set user environment variables
-ENV HOME=/home/appuser
-ENV USER=appuser
-ENV LOGNAME=appuser
 
 # Chrome/Browser environment variables for Docker
 ENV DISPLAY=:99

@@ -30,8 +30,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    # Run as non-root user for security
-    user: "1000:1000"
+    # Running as root user (no permission issues)
     environment:
       # Application configuration
       - LOCAL_STORAGE_DIR=/app/storage
