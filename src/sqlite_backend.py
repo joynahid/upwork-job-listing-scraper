@@ -128,13 +128,20 @@ class SQLiteJobTracker:
                     is_stale = (now - last_visited) > self.stale_threshold
                     time_diff = now - last_visited
 
-                    logger.info(
-                        "🕒 Job %s last visited %s ago, is_stale=%s (threshold=%s)",
-                        job_id[:20] + "..." if len(job_id) > 20 else job_id,
-                        time_diff,
-                        is_stale,
-                        self.stale_threshold,
-                    )
+                    if is_stale:
+                        logger.info(
+                            "🕒 Job %s last visited %s ago, will process (threshold=%s)",
+                            job_id[:20] + "..." if len(job_id) > 20 else job_id,
+                            time_diff,
+                            self.stale_threshold,
+                        )
+                    else:
+                        logger.info(
+                            "👀 Job %s already seen %s ago, skipping (not stale, threshold=%s)",
+                            job_id[:20] + "..." if len(job_id) > 20 else job_id,
+                            time_diff,
+                            self.stale_threshold,
+                        )
 
                     return is_stale
 
@@ -156,7 +163,7 @@ class SQLiteJobTracker:
         if not job_id:
             logger.error("Job data missing job_id, cannot mark as seen")
             return
-            
+
         logger.info("💾 Marking job %s as SEEN in database", job_id[:20] + "..." if len(job_id) > 20 else job_id)
 
         try:

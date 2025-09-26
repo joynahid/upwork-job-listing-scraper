@@ -13,23 +13,13 @@ services:
       - sqlite_data:/app/sqlite_data
       # Optional: mount source code for development (uncomment for dev mode)
       # - ./src:/app/src
-    ports:
-      # Expose port for potential web interface or debugging
-      - "8080:8080"
-    restart: unless-stopped
+    restart: "no"
     # Resource limits
     mem_limit: 2g
     memswap_limit: 2g
     # Security options
     security_opt:
       - no-new-privileges:true
-    # Health check
-    healthcheck:
-      test: ["CMD-SHELL", "python3 -c 'import sys; sys.exit(0)'"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     # Running as root user (no permission issues)
     environment:
       # Application configuration
