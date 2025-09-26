@@ -47,11 +47,16 @@ func NewJobAPI() (*JobAPI, error) {
 		return nil, fmt.Errorf("API_KEY environment variable is required")
 	}
 
-	// Open SQLite database
-	db, err := sql.Open("sqlite3", dbPath)
+	// Open SQLite database with proper connection settings
+	db, err := sql.Open("sqlite3", dbPath+"?cache=shared&mode=ro")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %v", err)
 	}
+
+	// Configure connection pool for better concurrent access
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(0) // No limit
 
 	// Test database connection
 	if err := db.Ping(); err != nil {
@@ -76,6 +81,11 @@ func NewJobAPI() (*JobAPI, error) {
 }
 
 func (api *JobAPI) refreshCache() error {
+	// Force a new connection to ensure we see latest data
+	if err := api.db.Ping(); err != nil {
+		log.Printf("❌ Database ping failed: %v", err)
+	}
+
 	// Query latest jobs from SQLite
 	query := `
 		SELECT job_id, data, last_visited_at 
@@ -86,6 +96,7 @@ func (api *JobAPI) refreshCache() error {
 
 	rows, err := api.db.Query(query)
 	if err != nil {
+		log.Printf("❌ Database query failed: %v", err)
 		return fmt.Errorf("failed to query jobs: %v", err)
 	}
 	defer rows.Close()
@@ -123,24 +134,46 @@ func (api *JobAPI) refreshCache() error {
 
 	// Update cache atomically
 	api.cacheMutex.Lock()
+	oldCount := len(api.cache)
 	api.cache = newCache
 	api.lastUpdated = time.Now()
 	api.cacheMutex.Unlock()
 
-	log.Printf("Cache refreshed with %d jobs", len(newCache))
+	// Only log if job count changed significantly
+	if len(newCache) != oldCount {
+		log.Printf("✅ Cache updated: %d jobs (was %d)", len(newCache), oldCount)
+	}
 	return nil
 }
 
 func (api *JobAPI) startBackgroundWorker() {
 	ticker := time.NewTicker(1 * time.Second)
+	logTicker := time.NewTicker(5 * time.Minute)
+
 	go func() {
 		defer ticker.Stop()
-		for range ticker.C {
-			if err := api.refreshCache(); err != nil {
-				log.Printf("Error refreshing cache: %v", err)
+		defer logTicker.Stop()
+
+		lastLogTime := time.Now()
+		log.Printf("🔄 Background worker goroutine started")
+
+		for {
+			select {
+			case <-ticker.C:
+				if err := api.refreshCache(); err != nil {
+					log.Printf("❌ Error refreshing cache: %v", err)
+				}
+			case <-logTicker.C:
+				api.cacheMutex.RLock()
+				jobCount := len(api.cache)
+				api.cacheMutex.RUnlock()
+				log.Printf("📊 Cache status: %d jobs, last updated: %s", jobCount, time.Since(lastLogTime).Round(time.Second))
+				lastLogTime = time.Now()
 			}
 		}
 	}()
+
+	log.Printf("🔄 Background worker setup completed")
 }
 
 func (api *JobAPI) authMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -239,7 +272,13 @@ func main() {
 
 	// Start background worker
 	api.startBackgroundWorker()
-	log.Println("Background worker started (1 second refresh interval)")
+	log.Println("🔄 Background worker started (1 second refresh interval, 5 minute status logs)")
+
+	// Log initial cache state
+	api.cacheMutex.RLock()
+	initialCount := len(api.cache)
+	api.cacheMutex.RUnlock()
+	log.Printf("📊 Initial cache loaded with %d jobs", initialCount)
 
 	// Setup routes
 	mux := api.setupRoutes()
