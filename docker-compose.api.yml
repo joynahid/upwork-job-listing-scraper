@@ -1,4 +1,24 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: upwork-postgres-api
+    environment:
+      - POSTGRES_DB=upwork_jobs
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - upwork-network
+
   upwork-job-api:
     build:
       context: .
@@ -8,11 +28,14 @@ services:
       - "8080:8080"
     environment:
       - API_KEY=${API_KEY:-your-secret-api-key-here}
-      - DB_PATH=/app/sqlite_data/jobs.db
       - PORT=8080
+      # PostgreSQL configuration
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=upwork_jobs
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
-      # Mount the SQLite database directory
-      - ./sqlite_data:/app/sqlite_data:ro
       # Optional: Mount logs directory if needed
       - ./logs:/app/logs
     restart: unless-stopped
@@ -22,8 +45,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - upwork-network
+
+volumes:
+  postgres_data:
+    driver: local
 
 networks:
   upwork-network:

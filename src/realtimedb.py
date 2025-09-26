@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from .sqlite_backend import SQLiteJobTracker, create_sqlite_tracker
+from .postgres_backend import PostgreSQLJobTracker, create_postgres_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -78,29 +78,28 @@ class JobData(BaseModel):
 
 
 class RealtimeJobDatabase:
-    """SQLite-based job database for persistent job tracking."""
+    """PostgreSQL-based job database for persistent job tracking."""
 
-    def __init__(self, rocksdb_path: str | None = None, stale_threshold_seconds: int = 10):
-        """Initialize RealtimeJobDatabase with SQLite backend.
+    def __init__(self, connection_string: str | None = None, stale_threshold_seconds: int = 10):
+        """Initialize RealtimeJobDatabase with PostgreSQL backend.
 
         Args:
-            rocksdb_path: Path to SQLite database directory (keeping name for compatibility)
+            connection_string: PostgreSQL connection string (if None, uses environment variables)
             stale_threshold_seconds: How old a job entry should be to be considered stale
         """
         self.stale_threshold_seconds = stale_threshold_seconds
 
-        # Initialize SQLite backend - this is our primary and only storage
-        self.sqlite_tracker: SQLiteJobTracker = create_sqlite_tracker(
-            rocksdb_path, stale_threshold_seconds
+        # Initialize PostgreSQL backend - this is our primary and only storage
+        self.postgres_tracker: PostgreSQLJobTracker = create_postgres_tracker(
+            connection_string, stale_threshold_seconds
         )
 
         logger.info(
-            "RealtimeJobDatabase initialized with SQLite backend at %s",
-            self.sqlite_tracker.db_file,
+            "RealtimeJobDatabase initialized with PostgreSQL backend",
         )
 
     def should_process(self, job_id: str) -> bool:
-        """Check if a job should be processed using SQLite.
+        """Check if a job should be processed using PostgreSQL.
 
         Args:
             job_id: Unique job identifier
@@ -108,10 +107,10 @@ class RealtimeJobDatabase:
         Returns:
             True if the job should be processed, False otherwise
         """
-        return self.sqlite_tracker.should_process(job_id)
+        return self.postgres_tracker.should_process(job_id)
 
     def do_seen(self, job_data: JobData) -> None:
-        """Mark a job as seen/processed using SQLite.
+        """Mark a job as seen/processed using PostgreSQL.
 
         Args:
             job_data: Job data to mark as seen
@@ -120,10 +119,10 @@ class RealtimeJobDatabase:
             raise ValueError("job_data must have a job_id")
             
         job_dict = job_data.model_dump()
-        self.sqlite_tracker.do_seen(job_dict)
+        self.postgres_tracker.do_seen(job_dict)
 
     def get_job_history(self, job_id: str, limit: int = 10) -> list[dict]:
-        """Get processing history for a job using SQLite.
+        """Get processing history for a job using PostgreSQL.
 
         Args:
             job_id: Unique job identifier
@@ -132,15 +131,15 @@ class RealtimeJobDatabase:
         Returns:
             List of job data dictionaries in reverse chronological order
         """
-        return self.sqlite_tracker.get_job_history(job_id, limit)
+        return self.postgres_tracker.get_job_history(job_id, limit)
 
     def get_stats(self) -> dict:
-        """Get SQLite database statistics.
+        """Get PostgreSQL database statistics.
 
         Returns:
             Dictionary with database statistics
         """
-        return self.sqlite_tracker.get_stats()
+        return self.postgres_tracker.get_stats()
 
     def record_failed_extraction(self, failed_job: FailedJobExtraction) -> None:
         """Record a failed job extraction attempt.
@@ -148,7 +147,7 @@ class RealtimeJobDatabase:
         Args:
             failed_job: FailedJobExtraction instance with failure details
         """
-        self.sqlite_tracker.record_failed_job(
+        self.postgres_tracker.record_failed_job(
             job_url=failed_job.url,
             error_message=failed_job.error_message,
             raw_data=failed_job.raw_data
@@ -163,7 +162,7 @@ class RealtimeJobDatabase:
         Returns:
             List of failed job dictionaries, most recent first
         """
-        return self.sqlite_tracker.get_failed_jobs(limit)
+        return self.postgres_tracker.get_failed_jobs(limit)
 
     def cleanup_failed_extractions(self, days_to_keep: int = 30) -> int:
         """Clean up old failed job entries.
@@ -174,10 +173,10 @@ class RealtimeJobDatabase:
         Returns:
             Number of entries deleted
         """
-        return self.sqlite_tracker.cleanup_failed_jobs(days_to_keep)
+        return self.postgres_tracker.cleanup_failed_jobs(days_to_keep)
 
     def cleanup_old_history(self, days_to_keep: int = 7) -> int:
-        """Clean up old history entries to save space using SQLite.
+        """Clean up old history entries to save space using PostgreSQL.
 
         Args:
             days_to_keep: Number of days of history to keep
@@ -185,13 +184,13 @@ class RealtimeJobDatabase:
         Returns:
             Number of entries deleted
         """
-        return self.sqlite_tracker.cleanup_old_history(days_to_keep)
+        return self.postgres_tracker.cleanup_old_history(days_to_keep)
 
     def close(self) -> None:
-        """Close SQLite connection with error handling."""
+        """Close PostgreSQL connection with error handling."""
         try:
-            if hasattr(self, 'sqlite_tracker') and self.sqlite_tracker:
-                self.sqlite_tracker.close()
+            if hasattr(self, 'postgres_tracker') and self.postgres_tracker:
+                self.postgres_tracker.close()
                 logger.info("RealtimeJobDatabase closed successfully")
         except Exception as e:
             logger.error("Error closing RealtimeJobDatabase: %s", e)

@@ -1,4 +1,25 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: upwork-postgres
+    environment:
+      - POSTGRES_DB=upwork_jobs
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
   upwork-job-listing-scraper:
     build:
       context: .
@@ -9,8 +30,6 @@ services:
       - ./storage:/app/storage
       # Mount logs directory
       - ./logs:/app/logs
-      # Mount SQLite data directory for persistent job tracking
-      - sqlite_data:/app/sqlite_data
       # Optional: mount source code for development (uncomment for dev mode)
       # - ./src:/app/src
     restart: "no"
@@ -26,32 +45,42 @@ services:
       - LOCAL_STORAGE_DIR=/app/storage
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
 
-      # Proxy configuration (new environment variables)
+      # Proxy configuration
       - PROXY_URL=${PROXY_URL:-}
 
-      # Database configuration
-      - ROCKSDB_DATA_DIR=/app/sqlite_data
+      # PostgreSQL configuration
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=upwork_jobs
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-  sqlite-viewer:
-    image: coleifer/sqlite-web
-    container_name: sqlite-viewer
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: upwork-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@upwork.local
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
     volumes:
-      # Mount the same SQLite data directory to view the database
-      - sqlite_data:/data
+      - pgadmin_data:/var/lib/pgadmin
     ports:
-      # Expose SQLite viewer on port 8081
-      - "8081:8080"
-    command: ["sqlite_web", "/data/jobs.db", "--host", "0.0.0.0", "--port", "8080"]
+      - "8081:80"
     restart: unless-stopped
     depends_on:
-      - upwork-job-listing-scraper
+      - postgres
     # Security options
     security_opt:
       - no-new-privileges:true
 
 # Volumes for persistent data
 volumes:
-  sqlite_data:
+  postgres_data:
+    driver: local
+  pgadmin_data:
     driver: local
 
 networks:

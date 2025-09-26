@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 type JobData struct {
@@ -37,33 +37,53 @@ type JobAPI struct {
 
 func NewJobAPI() (*JobAPI, error) {
 	// Get configuration from environment
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "./sqlite_data/jobs.db"
-	}
-
 	apiKey := os.Getenv("API_KEY")
 	if apiKey == "" {
 		return nil, fmt.Errorf("API_KEY environment variable is required")
 	}
 
-	// Open SQLite database with WAL mode for better concurrent access
-	db, err := sql.Open("sqlite3", dbPath+"?cache=shared&mode=rwc&_journal_mode=WAL&_synchronous=NORMAL&_cache_size=1000&_foreign_keys=1")
+	// Build PostgreSQL connection string
+	host := os.Getenv("POSTGRES_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	port := os.Getenv("POSTGRES_PORT")
+	if port == "" {
+		port = "5432"
+	}
+	database := os.Getenv("POSTGRES_DB")
+	if database == "" {
+		database = "upwork_jobs"
+	}
+	username := os.Getenv("POSTGRES_USER")
+	if username == "" {
+		username = "postgres"
+	}
+	password := os.Getenv("POSTGRES_PASSWORD")
+	if password == "" {
+		password = "postgres"
+	}
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, username, password, database)
+
+	// Open PostgreSQL database connection
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %v", err)
 	}
 
 	// Configure connection pool for better concurrent access
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(0) // No limit
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	// Test database connection
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %v", err)
 	}
 
-	log.Printf("Connected to SQLite database: %s", dbPath)
+	log.Printf("Connected to PostgreSQL database: %s:%s/%s", host, port, database)
 
 	api := &JobAPI{
 		db:          db,
@@ -86,21 +106,15 @@ func (api *JobAPI) refreshCache() error {
 		log.Printf("❌ Database ping failed: %v", err)
 	}
 
-	log.Printf("🔍 Refreshing cache from database...")
+	log.Printf("🔍 Refreshing cache from PostgreSQL database...")
 
-	// Query latest jobs from SQLite
+	// Query latest jobs from PostgreSQL
 	query := `
 		SELECT job_id, data, last_visited_at 
 		FROM job_entries 
 		WHERE entry_type = 'latest'
 		ORDER BY last_visited_at DESC
 	`
-
-	// Execute a dummy query to ensure connection is fresh
-	_, err := api.db.Exec("PRAGMA wal_checkpoint(PASSIVE);")
-	if err != nil {
-		log.Printf("⚠️ WAL checkpoint failed: %v", err)
-	}
 
 	rows, err := api.db.Query(query)
 	if err != nil {
@@ -149,9 +163,9 @@ func (api *JobAPI) refreshCache() error {
 
 	// Always log cache updates for debugging
 	if len(newCache) != oldCount {
-		log.Printf("✅ Cache updated: %d jobs (was %d)", len(newCache), oldCount)
+		log.Printf("✅ PostgreSQL cache updated: %d jobs (was %d)", len(newCache), oldCount)
 	} else {
-		log.Printf("🔄 Cache refreshed: %d jobs (no change)", len(newCache))
+		log.Printf("🔄 PostgreSQL cache refreshed: %d jobs (no change)", len(newCache))
 	}
 	return nil
 }
