@@ -1,0 +1,30 @@
+services:
+  upwork-job-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: upwork-job-api
+    ports:
+      - "8080:8080"
+    environment:
+      - API_KEY=${API_KEY:-your-secret-api-key-here}
+      - DB_PATH=/app/sqlite_data/jobs.db
+      - PORT=8080
+    volumes:
+      # Mount the SQLite database directory
+      - ./sqlite_data:/app/sqlite_data:ro
+      # Optional: Mount logs directory if needed
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "--header=X-API-KEY: ${API_KEY:-your-secret-api-key-here}", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - upwork-network
+
+networks:
+  upwork-network:
+    driver: bridge
