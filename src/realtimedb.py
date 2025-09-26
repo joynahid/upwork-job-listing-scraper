@@ -188,13 +188,23 @@ class RealtimeJobDatabase:
         return self.sqlite_tracker.cleanup_old_history(days_to_keep)
 
     def close(self) -> None:
-        """Close SQLite connection."""
-        self.sqlite_tracker.close()
+        """Close SQLite connection with error handling."""
+        try:
+            if hasattr(self, 'sqlite_tracker') and self.sqlite_tracker:
+                self.sqlite_tracker.close()
+                logger.info("RealtimeJobDatabase closed successfully")
+        except Exception as e:
+            logger.error("Error closing RealtimeJobDatabase: %s", e)
 
     def __enter__(self):
         """Context manager entry."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
-        self.close()
+        """Context manager exit with error handling."""
+        try:
+            self.close()
+        except Exception as e:
+            logger.error("Error in RealtimeJobDatabase context manager exit: %s", e)
+            # Don't suppress the original exception
+            return False

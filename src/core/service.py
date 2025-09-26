@@ -426,64 +426,136 @@ class UpworkJobService:
         await asyncio.sleep(delay)
 
     async def cleanup(self) -> None:
-        """Clean up resources."""
+        """Clean up resources with comprehensive error handling."""
+        logger.info("Starting comprehensive cleanup process...")
+        cleanup_errors = []
+
+        # Step 1: Close browser tabs and driver
         if self.driver:
             try:
                 logger.info("Attempting to close Botasaurus driver...")
 
-                # Try to close all tabs first
+                # Try to close all tabs first with timeout
                 try:
-                    self.driver.close_all_tabs()
+                    # Give tabs a reasonable time to close
+                    await asyncio.wait_for(
+                        asyncio.get_event_loop().run_in_executor(
+                            None, self.driver.close_all_tabs
+                        ), 
+                        timeout=10.0
+                    )
+                    logger.debug("All tabs closed successfully")
+                except asyncio.TimeoutError:
+                    logger.warning("Tab closure timed out after 10 seconds")
                 except Exception as exc:
                     logger.debug("Failed to close all tabs: %s", exc)
+                    cleanup_errors.append(f"Tab closure failed: {exc}")
 
-                # Close the driver
-                self.driver.close()
-                logger.info("Driver closed successfully")
-
-            except Exception as exc:  # pragma: no cover - best effort cleanup
-                logger.warning("Driver close encountered an issue: %s", exc)
-
-                # Force cleanup if normal close fails
+                # Close the driver with timeout
                 try:
-                    logger.info("Attempting force cleanup...")
-                    self.driver.quit()
-                except Exception as quit_exc:
-                    logger.debug("Force quit also failed: %s", quit_exc)
+                    await asyncio.wait_for(
+                        asyncio.get_event_loop().run_in_executor(
+                            None, self.driver.close
+                        ), 
+                        timeout=15.0
+                    )
+                    logger.info("Driver closed successfully")
+                except asyncio.TimeoutError:
+                    logger.warning("Driver close timed out after 15 seconds, attempting force quit")
+                    try:
+                        self.driver.quit()
+                        logger.info("Driver force quit completed")
+                    except Exception as quit_exc:
+                        logger.warning("Force quit also failed: %s", quit_exc)
+                        cleanup_errors.append(f"Driver force quit failed: {quit_exc}")
+                except Exception as exc:
+                    logger.warning("Driver close encountered an issue: %s", exc)
+                    cleanup_errors.append(f"Driver close failed: {exc}")
+                    
+                    # Force cleanup if normal close fails
+                    try:
+                        logger.info("Attempting force cleanup...")
+                        self.driver.quit()
+                        logger.info("Force cleanup completed")
+                    except Exception as quit_exc:
+                        logger.warning("Force quit also failed: %s", quit_exc)
+                        cleanup_errors.append(f"Force quit failed: {quit_exc}")
 
+            except Exception as driver_exc:
+                logger.error("Unexpected error during driver cleanup: %s", driver_exc)
+                cleanup_errors.append(f"Driver cleanup error: {driver_exc}")
             finally:
                 self.driver = None
 
-        # Additional cleanup - kill any remaining Chrome processes that might be hanging
+        # Step 2: Kill any remaining Chrome processes (with safety checks)
+        await self._cleanup_hanging_processes(cleanup_errors)
+
+        # Step 3: Close database connection (moved to main.py for proper order)
+        # Database cleanup is now handled in main.py to ensure proper shutdown order
+
+        # Step 4: Report cleanup status
+        if cleanup_errors:
+            logger.warning("Cleanup completed with %d errors: %s", 
+                         len(cleanup_errors), "; ".join(cleanup_errors))
+        else:
+            logger.info("Service cleanup completed successfully")
+
+    async def _cleanup_hanging_processes(self, cleanup_errors: list) -> None:
+        """Clean up any hanging Chrome processes with safety checks."""
         try:
             import os
             import subprocess
+            import platform
+
+            # Only attempt process cleanup on Unix-like systems
+            if platform.system() not in ['Linux', 'Darwin']:
+                logger.debug("Process cleanup skipped on %s", platform.system())
+                return
 
             # Get current process ID to avoid killing ourselves
             current_pid = os.getpid()
-
-            # Find and kill any Chrome processes with our temp directory pattern
-            result = subprocess.run(["pgrep", "-f", "bota.*chrome"], capture_output=True, text=True)
-
-            if result.stdout:
-                pids = result.stdout.strip().split("\n")
-                for pid_str in pids:
-                    try:
-                        pid = int(pid_str)
-                        if pid != current_pid:  # Don't kill ourselves
-                            logger.debug(f"Killing hanging Chrome process: {pid}")
-                            os.kill(pid, 9)  # SIGKILL
-                    except (ValueError, ProcessLookupError, PermissionError) as e:
-                        logger.debug(f"Could not kill process {pid_str}: {e}")
+            
+            # Find Chrome processes with our pattern
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(
+                        None, 
+                        subprocess.run, 
+                        ["pgrep", "-f", "bota.*chrome"], 
+                        {"capture_output": True, "text": True}
+                    ),
+                    timeout=5.0
+                )
+                
+                if result.returncode == 0 and result.stdout:
+                    pids = result.stdout.strip().split("\n")
+                    killed_count = 0
+                    
+                    for pid_str in pids:
+                        try:
+                            pid = int(pid_str)
+                            if pid != current_pid:  # Don't kill ourselves
+                                os.kill(pid, 9)  # SIGKILL
+                                killed_count += 1
+                                logger.debug(f"Killed hanging Chrome process: {pid}")
+                        except (ValueError, ProcessLookupError):
+                            # Process already gone or invalid PID
+                            pass
+                        except PermissionError as e:
+                            logger.debug(f"Permission denied killing process {pid_str}: {e}")
+                    
+                    if killed_count > 0:
+                        logger.info(f"Cleaned up {killed_count} hanging Chrome processes")
+                        
+            except subprocess.CalledProcessError:
+                # pgrep found no processes, which is fine
+                logger.debug("No hanging Chrome processes found")
+            except asyncio.TimeoutError:
+                logger.warning("Process cleanup timed out")
+                cleanup_errors.append("Process cleanup timeout")
 
         except Exception as cleanup_exc:
-            logger.debug("Additional cleanup failed: %s", cleanup_exc)
-
-        # Close RocksDB connection
-        try:
-            self.rt_db.close()
-            logger.info("RocksDB connection closed")
-        except Exception as db_cleanup_exc:
-            logger.debug("RocksDB cleanup failed: %s", db_cleanup_exc)
+            logger.debug("Process cleanup failed: %s", cleanup_exc)
+            cleanup_errors.append(f"Process cleanup failed: {cleanup_exc}")
 
         logger.info("Service cleanup completed")

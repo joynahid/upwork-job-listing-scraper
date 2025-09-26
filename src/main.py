@@ -27,7 +27,7 @@ class DateTimeEncoder(json.JSONEncoder):
 
 
 class SimpleDataStore:
-    """Simple data storage for scraped jobs."""
+    """Simple data storage for scraped jobs with context manager support."""
     
     def __init__(self, storage_dir: str = "./storage"):
         self.storage_dir = Path(storage_dir)
@@ -39,21 +39,50 @@ class SimpleDataStore:
         self.key_value_dir.mkdir(parents=True, exist_ok=True)
         
         self.job_counter = 0
+        self._closed = False
         
     async def push_data(self, data: dict) -> None:
         """Store job data to JSON file."""
-        self.job_counter += 1
-        filename = f"{self.job_counter:09d}.json"
-        file_path = self.datasets_dir / filename
-        
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
+        if self._closed:
+            raise RuntimeError("Cannot push data to closed SimpleDataStore")
+            
+        try:
+            self.job_counter += 1
+            filename = f"{self.job_counter:09d}.json"
+            file_path = self.datasets_dir / filename
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to push data: {e}")
+            raise
     
     async def set_value(self, key: str, value: dict) -> None:
         """Store key-value data."""
-        file_path = self.key_value_dir / f"{key}.json"
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(value, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
+        if self._closed:
+            raise RuntimeError("Cannot set value on closed SimpleDataStore")
+            
+        try:
+            file_path = self.key_value_dir / f"{key}.json"
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(value, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
+        except Exception as e:
+            logging.getLogger(__name__).error(f"Failed to set value for key '{key}': {e}")
+            raise
+
+    def close(self) -> None:
+        """Mark the data store as closed."""
+        self._closed = True
+        logging.getLogger(__name__).debug("SimpleDataStore closed")
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()
+        return False
 
 
 async def main() -> None:
@@ -66,91 +95,143 @@ async def main() -> None:
     )
     logger = logging.getLogger(__name__)
 
-    # Get storage directory from environment
-    storage_dir = os.getenv('LOCAL_STORAGE_DIR', './storage')
-    data_store = SimpleDataStore(storage_dir)
-
-    # Get input from environment or use defaults
-    input_file = Path(storage_dir) / "key_value_stores" / "default" / "INPUT.json"
-    actor_input_raw = {}
-    
-    if input_file.exists():
-        try:
-            with open(input_file, 'r', encoding='utf-8') as f:
-                actor_input_raw = json.load(f)
-        except Exception as e:
-            logger.warning(f"Could not load input file: {e}")
+    # Initialize variables for cleanup
+    service = None
+    rt_db = None
+    data_store = None
 
     try:
-        actor_input = ActorInput(**actor_input_raw)
-    except Exception as e:
-        logger.error(f"Invalid input configuration: {e}")
-        return
+        # Get storage directory from environment
+        storage_dir = os.getenv('LOCAL_STORAGE_DIR', './storage')
+        data_store = SimpleDataStore(storage_dir)
 
-    logger.info("Starting Upwork job listing scraper")
-    if actor_input.debug_mode:
-        logger.info(f"Input parameters: {actor_input.model_dump_json(indent=2)}")
-
-    # Initialize RocksDB job database
-    stale_threshold = int(actor_input.delay_max)
-    rt_db = RealtimeJobDatabase(
-        stale_threshold_seconds=stale_threshold  # Use max delay as stale threshold
-    )
-    logger.info("Initialized job database with stale threshold: %d seconds", stale_threshold)
-
-    # Initialize the service
-    service = UpworkJobService(actor_input, rt_db, data_store)
-
-    try:
-        # Initialize service
-        await service.initialize()
-
-        # Build search URLs from parameters
-        search_urls = actor_input.build_search_urls()
-        logger.info(f"Generated {len(search_urls)} search URLs")
-
-        if actor_input.debug_mode:
-            for i, url in enumerate(search_urls, 1):
-                logger.info(f"URL {i}: {url}")
-
-        logger.info("Starting job scraping...")
-
-        # Run the scraping
-        await service.run_scraping(search_urls)
-
-        # Log summary
-        total_jobs = len(service.comprehensive_jobs_found)
-        logger.info(f"Successfully processed {total_jobs} comprehensive jobs")
-
-        # Get database statistics
-        db_stats = rt_db.get_stats()
-
-        # Store summary statistics
-        summary = {
-            "total_jobs_found": total_jobs,
-            "search_urls_count": len(search_urls),
-            "extraction_type": "comprehensive",
-            "max_jobs_limit": actor_input.max_jobs,
-            "processed_at": datetime.now().isoformat(),
-            "input_parameters": actor_input.model_dump(),
-            "database_stats": db_stats,
-        }
-
-        await data_store.set_value("RUN_SUMMARY", summary)
-        logger.info(f"Completed successfully - {total_jobs} comprehensive jobs processed")
-
-    except Exception as e:
-        logger.error(f"Scraper execution failed: {e}", exc_info=True)
+        # Get input from environment or use defaults
+        input_file = Path(storage_dir) / "key_value_stores" / "default" / "INPUT.json"
+        actor_input_raw = {}
         
-        # Store error summary
-        error_summary = {
-            "error": str(e),
-            "processed_at": datetime.now().isoformat(),
-            "total_jobs_processed": len(service.comprehensive_jobs_found) if service else 0,
-        }
-        await data_store.set_value("ERROR_SUMMARY", error_summary)
+        if input_file.exists():
+            try:
+                with open(input_file, 'r', encoding='utf-8') as f:
+                    actor_input_raw = json.load(f)
+            except Exception as e:
+                logger.warning(f"Could not load input file: {e}")
 
+        try:
+            actor_input = ActorInput(**actor_input_raw)
+        except Exception as e:
+            logger.error(f"Invalid input configuration: {e}")
+            return
+
+        logger.info("Starting Upwork job listing scraper")
+        if actor_input.debug_mode:
+            logger.info(f"Input parameters: {actor_input.model_dump_json(indent=2)}")
+
+        # Initialize database with proper error handling
+        stale_threshold = int(actor_input.delay_max)
+        try:
+            rt_db = RealtimeJobDatabase(
+                stale_threshold_seconds=stale_threshold
+            )
+            logger.info("Initialized job database with stale threshold: %d seconds", stale_threshold)
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}")
+            raise
+
+        # Initialize the service
+        service = UpworkJobService(actor_input, rt_db, data_store)
+
+        try:
+            # Initialize service
+            await service.initialize()
+
+            # Build search URLs from parameters
+            search_urls = actor_input.build_search_urls()
+            logger.info(f"Generated {len(search_urls)} search URLs")
+
+            if actor_input.debug_mode:
+                for i, url in enumerate(search_urls, 1):
+                    logger.info(f"URL {i}: {url}")
+
+            logger.info("Starting job scraping...")
+
+            # Run the scraping
+            await service.run_scraping(search_urls)
+
+            # Log summary
+            total_jobs = len(service.comprehensive_jobs_found)
+            logger.info(f"Successfully processed {total_jobs} comprehensive jobs")
+
+            # Get database statistics
+            db_stats = rt_db.get_stats()
+
+            # Store summary statistics
+            summary = {
+                "total_jobs_found": total_jobs,
+                "search_urls_count": len(search_urls),
+                "extraction_type": "comprehensive",
+                "max_jobs_limit": actor_input.max_jobs,
+                "processed_at": datetime.now().isoformat(),
+                "input_parameters": actor_input.model_dump(),
+                "database_stats": db_stats,
+            }
+
+            await data_store.set_value("RUN_SUMMARY", summary)
+            logger.info(f"Completed successfully - {total_jobs} comprehensive jobs processed")
+
+        except KeyboardInterrupt:
+            logger.info("Scraper interrupted by user")
+            raise
+        except Exception as e:
+            logger.error(f"Scraper execution failed: {e}", exc_info=True)
+            
+            # Store error summary with safe access
+            try:
+                error_summary = {
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "processed_at": datetime.now().isoformat(),
+                    "total_jobs_processed": len(service.comprehensive_jobs_found) if service else 0,
+                }
+                if data_store:
+                    await data_store.set_value("ERROR_SUMMARY", error_summary)
+            except Exception as summary_error:
+                logger.error(f"Failed to store error summary: {summary_error}")
+            
+            # Re-raise the original exception
+            raise
+
+    except KeyboardInterrupt:
+        logger.info("Application interrupted by user")
+        raise
+    except Exception as e:
+        logger.error(f"Critical application error: {e}", exc_info=True)
+        raise
     finally:
-        # Clean up resources
+        # Clean up resources in reverse order of initialization
+        logger.info("Starting cleanup process...")
+        
+        # Clean up service (includes browser/driver cleanup)
         if service:
-            await service.cleanup()
+            try:
+                await service.cleanup()
+                logger.info("Service cleanup completed")
+            except Exception as cleanup_error:
+                logger.error(f"Service cleanup failed: {cleanup_error}")
+
+        # Clean up database connection
+        if rt_db:
+            try:
+                rt_db.close()
+                logger.info("Database connection closed")
+            except Exception as db_error:
+                logger.error(f"Database cleanup failed: {db_error}")
+
+        # Clean up data store
+        if data_store:
+            try:
+                data_store.close()
+                logger.info("Data store closed")
+            except Exception as store_error:
+                logger.error(f"Data store cleanup failed: {store_error}")
+        
+        logger.info("Cleanup process completed")

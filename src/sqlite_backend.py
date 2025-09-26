@@ -416,21 +416,42 @@ class SQLiteJobTracker:
             return 0
 
     def close(self) -> None:
-        """Close the database connection."""
+        """Close the database connection with comprehensive error handling."""
         try:
-            if hasattr(self, "engine"):
+            # Close any open sessions first
+            if hasattr(self, "SessionLocal") and self.SessionLocal:
+                try:
+                    # Close any remaining sessions
+                    self.SessionLocal.close_all()
+                except Exception as session_exc:
+                    logger.debug("Error closing sessions: %s", session_exc)
+            
+            # Dispose of the engine
+            if hasattr(self, "engine") and self.engine:
                 self.engine.dispose()
                 logger.info("SQLite database connection closed")
+                
         except Exception as exc:
             logger.error("Error closing SQLite database: %s", exc)
+        finally:
+            # Ensure attributes are cleared even if cleanup fails
+            if hasattr(self, "engine"):
+                self.engine = None
+            if hasattr(self, "SessionLocal"):
+                self.SessionLocal = None
 
     def __enter__(self):
         """Context manager entry."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
-        self.close()
+        """Context manager exit with error handling."""
+        try:
+            self.close()
+        except Exception as e:
+            logger.error("Error in SQLiteJobTracker context manager exit: %s", e)
+            # Don't suppress the original exception
+            return False
 
 
 def create_sqlite_tracker(
