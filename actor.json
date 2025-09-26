@@ -1,0 +1,76 @@
+{
+    "actorSpecification": 1,
+    "name": "upwork-job-listing-scraper",
+    "title": "Upwork Job Listing Scraper",
+    "description": "A comprehensive Upwork job listing scraper using structured search parameters with Apify proxy support for bypassing anti-bot protection",
+    "version": "1.0.0",
+    "buildTag": "latest",
+    "dockerfile": "./Dockerfile",
+    "readme": "./README.md",
+    "input": "./INPUT_SCHEMA.json",
+    "minMemoryMbytes": 512,
+    "maxMemoryMbytes": 2048,
+    "storages": {
+        "dataset": {
+            "actorSpecification": 1,
+            "title": "Upwork Jobs Dataset",
+            "description": "Dataset containing scraped Upwork job listings with detailed information",
+            "views": {
+                "overview": {
+                    "title": "Jobs Overview",
+                    "description": "Overview of scraped Upwork job listings",
+                    "transformation": {
+                        "fields": [
+                            "title",
+                            "description",
+                            "budget",
+                            "hourly_rate",
+                            "skills",
+                            "posted_time",
+                            "proposals",
+                            "url",
+                            "scraped_at"
+                        ]
+                    },
+                    "display": {
+                        "component": "table",
+                        "properties": {
+                            "title": {
+                                "label": "Job Title",
+                                "format": "text"
+                            },
+                            "url": {
+                                "label": "Job Link",
+                                "format": "link"
+                            },
+                            "budget": {
+                                "label": "Budget",
+                                "format": "object"
+                            },
+                            "hourly_rate": {
+                                "label": "Hourly Rate",
+                                "format": "object"
+                            },
+                            "skills": {
+                                "label": "Skills",
+                                "format": "array"
+                            },
+                            "posted_time": {
+                                "label": "Posted",
+                                "format": "object"
+                            },
+                            "proposals": {
+                                "label": "Proposals",
+                                "format": "object"
+                            },
+                            "scraped_at": {
+                                "label": "Scraped At",
+                                "format": "datetime"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

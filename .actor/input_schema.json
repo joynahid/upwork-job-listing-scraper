@@ -1,0 +1,161 @@
+{
+  "title": "Upwork Job Scraper",
+  "description": "Scrape Upwork job listings with structured search parameters and detailed information extraction",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "searchParameters": {
+      "title": "Search Parameters",
+      "type": "object",
+      "description": "Structured search parameters for Upwork job queries",
+      "editor": "json",
+      "properties": {
+        "keywords": {
+          "title": "Keywords",
+          "type": "string",
+          "description": "Search keywords (e.g., 'python automation', 'video processing')",
+          "editor": "textfield"
+        },
+        "minBudget": {
+          "title": "Minimum Budget",
+          "type": "integer",
+          "description": "Minimum budget amount in USD",
+          "editor": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "maxBudget": {
+          "title": "Maximum Budget",
+          "type": "integer",
+          "description": "Maximum budget amount in USD",
+          "editor": "number",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "minHourlyRate": {
+          "title": "Minimum Hourly Rate",
+          "type": "integer",
+          "description": "Minimum hourly rate in USD",
+          "editor": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "maxHourlyRate": {
+          "title": "Maximum Hourly Rate",
+          "type": "integer",
+          "description": "Maximum hourly rate in USD",
+          "editor": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "budgetType": {
+          "title": "Budget Type",
+          "type": "string",
+          "description": "Type of budget filter",
+          "editor": "select",
+          "enum": ["fixed", "hourly", "any"]
+        },
+        "experienceLevel": {
+          "title": "Experience Level",
+          "type": "string",
+          "description": "Required experience level",
+          "editor": "select",
+          "enum": ["entry-level", "intermediate", "expert", "any"]
+        },
+        "location": {
+          "title": "Location",
+          "type": "string",
+          "description": "Geographic location filter",
+          "editor": "select",
+          "enum": [
+            "worldwide",
+            "Americas",
+            "Europe",
+            "Asia",
+            "Oceania",
+            "Africa",
+            "United States"
+          ]
+        },
+        "paymentVerified": {
+          "title": "Payment Verified Clients Only",
+          "type": "boolean",
+          "description": "Only include payment verified clients",
+          "editor": "checkbox"
+        },
+        "sortBy": {
+          "title": "Sort By",
+          "type": "string",
+          "description": "Sort order for results",
+          "editor": "select",
+          "enum": ["recency", "relevance", "client_rating", "budget"]
+        }
+      }
+    },
+    "customSearchUrls": {
+      "title": "Custom Search URLs",
+      "type": "array",
+      "description": "Custom Upwork search URLs to scrape (takes precedence over search parameters)",
+      "editor": "json",
+      "items": {
+        "type": "string"
+      }
+    },
+    "extractDetails": {
+      "title": "Extract Detailed Information",
+      "type": "boolean",
+      "description": "Extract detailed job information from individual job pages (slower but more comprehensive)",
+      "editor": "checkbox"
+    },
+    "maxJobs": {
+      "title": "Maximum Jobs",
+      "type": "integer",
+      "description": "Maximum number of jobs to process",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "delayMin": {
+      "title": "Minimum Delay (seconds)",
+      "type": "integer",
+      "description": "Minimum delay between requests in seconds",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 60
+    },
+    "delayMax": {
+      "title": "Maximum Delay (seconds)",
+      "type": "integer",
+      "description": "Maximum delay between requests in seconds",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 60
+    },
+    "takeScreenshots": {
+      "title": "Take Screenshots",
+      "type": "boolean",
+      "description": "Take screenshots of search pages for debugging",
+      "editor": "checkbox"
+    },
+    "debugMode": {
+      "title": "Debug Mode",
+      "type": "boolean",
+      "description": "Enable debug logging and verbose output",
+      "editor": "checkbox"
+    },
+    "outputFormat": {
+      "title": "Output Format",
+      "type": "string",
+      "description": "Output format type",
+      "editor": "select",
+      "enum": ["basic", "enhanced"]
+    },
+    "includeRawData": {
+      "title": "Include Raw Data",
+      "type": "boolean",
+      "description": "Include raw scraped data alongside parsed data",
+      "editor": "checkbox"
+    }
+  },
+  "required": []
+}

@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  upwork-job-listing-scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: upwork-job-listing-scraper
+    environment:
+      # Apify configuration
+      - APIFY_LOCAL_STORAGE_DIR=/app/storage
+      - APIFY_LOG_LEVEL=INFO
+      # Add other environment variables from .env file
+      - APIFY_TOKEN=${APIFY_TOKEN:-}
+      - APIFY_PROXY_GROUP=${APIFY_PROXY_GROUP:-}
+      - APIFY_PROXY_PASSWORD=${APIFY_PROXY_PASSWORD:-}
+      # Browser configuration
+      - PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
+    volumes:
+      # Mount storage directory for persistent data
+      - ./storage:/app/storage
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Optional: mount source code for development (uncomment for dev mode)
+      # - ./src:/app/src
+    ports:
+      # Expose port for potential web interface or debugging
+      - "8080:8080"
+    restart: unless-stopped
+    # Resource limits
+    mem_limit: 2g
+    memswap_limit: 2g
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c 'import sys; sys.exit(0)'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Run as non-root user for security
+    user: "1000:1000"
+
+  # Optional: Redis for caching (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: upwork-scraper-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   command: redis-server --appendonly yes
+
+# Optional: volumes for persistent data
+# volumes:
+#   redis_data:
+#     driver: local
+
+networks:
+  default:
+    name: upwork-job-listing-scraper-network

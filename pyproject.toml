@@ -1,0 +1,7 @@
+[project]
+name = "upwork-job-listing-scraper"
+version = "0.1.0"
+description = "A comprehensive Upwork job listing scraper built with Apify and Playwright"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []

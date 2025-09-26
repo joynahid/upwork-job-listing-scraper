@@ -1,0 +1,159 @@
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+.venv
+venv
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.python-version
+
+# IDE and editor files
+.vscode/
+.idea/
+.zed/
+*.swp
+*.swo
+*~
+.DS_Store
+.mise.toml
+.nvim.lua
+
+# Apify-specific files
+storage/
+apify_storage/
+node_modules/
+.apify/
+
+# Logs and debug files
+*.log
+logs/
+*.debug
+debug_*.png
+debug_*.jpg
+*_debug.png
+*_debug.jpg
+cloudflare_*.png
+cloudflare_*.jpg
+*_detection_*.png
+*_detection_*.jpg
+test_detection_*.png
+test_detection_*.jpg
+*_debug_cropped.png
+*_debug_cropped.jpg
+threshold_debug.png
+search_results_*.png
+opencv_*.png
+screenshot_*.png
+screenshot_*.jpg
+
+# Test and coverage files
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+cover/
+
+# Jupyter notebooks
+.ipynb_checkpoints
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# Pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# Docker
+.dockerignore
+
+# Temporary files and caches
+*.tmp
+*.temp
+.cache/
+.ruff_cache/
+
+# Job search results and scraped data (keep structure, ignore data)
+job_search_results_*.json
+upwork_job_search.log
+cloudflare_monitor.log
+cloudflare_monitor_screenshots/
+
+# Development and testing files
+test_*.py
+debug_*.py
+*_test.py
+monitor_*.py
+run_*.py
+*_clicker.py
+*_detector.py
+*_finder.py
+enhanced_*.py
+simple_*.py
+final_*.py
+
+# Configuration files that might contain sensitive data
+profile.json
+past_proposals.json
+keywords.json
+
+# UV lock file (if using uv package manager)
+uv.lock
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# OS-specific files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db

@@ -1,0 +1,18 @@
+{
+  "actorSpecification": 1,
+  "name": "upworkjobposting",
+  "title": "Upwork Job Scraper",
+  "description": "Advanced Upwork job scraper with structured search parameters, bot detection evasion, and detailed job information extraction. Uses Camoufox and Crawlee for reliable scraping.",
+  "version": "1.0",
+  "buildTag": "latest",
+  "meta": {
+    "templateId": "python-crawlee-playwright"
+  },
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile",
+  "readme": "./README.md",
+  "categories": ["BUSINESS"],
+  "isPublic": false,
+  "seoTitle": "Upwork Job Scraper - Extract Job Listings with Advanced Bot Detection Evasion",
+  "seoDescription": "Scrape Upwork job listings with structured search parameters, advanced bot detection evasion using Camoufox, and detailed information extraction. Perfect for freelancers and agencies."
+}
