@@ -1,9 +1,0 @@
-# Apify dependencies
-apify
-
-# Botasaurus for web scraping with bot detection bypass
-botasaurus
-
-# Core dependencies
-pydantic
-pydantic-settings

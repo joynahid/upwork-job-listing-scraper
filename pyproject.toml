@@ -1,7 +1,13 @@
 [project]
-name = "upwork-job-listing-scraper"
+name = "upworkjobposting"
 version = "0.1.0"
-description = "A comprehensive Upwork job listing scraper built with Apify and Playwright"
+description = "Upwork job listing scraper using Botasaurus"
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = []
+requires-python = ">=3.13"
+dependencies = [
+    "botasaurus>=4.0.88",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "sqlalchemy>=2.0.43",
+    "typing-extensions>=4.12.2",
+]

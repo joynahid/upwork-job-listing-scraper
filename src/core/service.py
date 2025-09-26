@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import random
 from datetime import datetime
 from typing import Any
 
-from apify import Actor
 from botasaurus_driver import Driver
+from ..realtimedb import JobData, RealtimeJobDatabase, FailedJobExtraction
 
 from ..schemas.input import ActorInput
 from .extraction_scripts import JOB_LISTING_EXTRACTION_SCRIPT, JOB_DETAIL_SCRIPT
@@ -20,13 +21,13 @@ logger = logging.getLogger(__name__)
 class UpworkJobService:
     """Main service for Upwork job scraping using Botasaurus."""
 
-    def __init__(self, input_config: ActorInput):
+    def __init__(self, input_config: ActorInput, rt_db: RealtimeJobDatabase, data_store: Any = None):
         self.config: ActorInput = input_config
         self.driver: Driver | None = None
         self.comprehensive_jobs_found: list[dict] = []
-        self.seen_job_urls: set[str] = set()
-        self.proxy_configuration = None
         self.proxy_url: str | None = None
+        self.rt_db: RealtimeJobDatabase = rt_db
+        self.data_store = data_store
 
     async def initialize(self) -> None:
         """Initialize Botasaurus driver and proxy configuration."""
@@ -37,18 +38,12 @@ class UpworkJobService:
             self.config.debug_mode,
         )
 
-        try:
-            logger.info("Creating Apify proxy configuration")
-            self.proxy_configuration = await Actor.create_proxy_configuration(
-                groups=["RESIDENTIAL"],
-                country_code="US",
-            )
-            self.proxy_url = await self.proxy_configuration.new_url()
-            logger.info("Using Apify proxy URL for Botasaurus driver")
-        except Exception as exc:
-            logger.warning("Proxy configuration unavailable: %s", exc)
-            self.proxy_configuration = None
-            self.proxy_url = None
+        # Get proxy URL from environment
+        self.proxy_url = os.getenv('PROXY_URL')
+        if self.proxy_url:
+            logger.info("Using HTTP proxy from PROXY_URL environment variable")
+        else:
+            logger.info("No proxy configured - running without proxy")
 
         driver_kwargs: dict[str, Any] = {
             "headless": False,
@@ -83,7 +78,7 @@ class UpworkJobService:
                 break
 
             logger.info("Processing search URL %s/%s: %s", index, len(search_urls), url)
-            await Actor.set_status_message(f"Scraping search page {index}/{len(search_urls)}")
+            logger.info(f"Scraping search page {index}/{len(search_urls)}")
 
             try:
                 await self._process_search_url(url)
@@ -130,19 +125,59 @@ class UpworkJobService:
 
         # Process each job URL to get comprehensive data
         new_job_urls = []
+        seen_job_ids = set()  # Track job_ids in this batch for uniqueness checking
+        
         for job_url in job_urls:
             if len(self.comprehensive_jobs_found) >= self.config.max_jobs:
                 break
 
-            if job_url in self.seen_job_urls:
-                logger.debug("Skipping duplicate job URL: %s", job_url)
-                continue
+            # Extract job_id from URL for RocksDB tracking
+            job_id = None
+            try:
+                # Remove query parameters first
+                url_without_params = job_url.split("?")[0]
+                
+                # Split by "/" and get the last non-empty part
+                parts = [part for part in url_without_params.split("/") if part]
+                
+                if parts:
+                    # The job ID is typically the last part, which looks like a tilde followed by numbers
+                    last_part = parts[-1]
+                    
+                    # If the last part starts with ~, it's likely the job ID
+                    if last_part.startswith("~"):
+                        job_id = last_part
+                    else:
+                        # Fallback to old logic
+                        job_id = last_part
+                        
+                logger.info("🔍 Extracted job_id: '%s' from URL: %s", job_id, job_url)
+            except Exception:
+                logger.warning("Could not extract job_id from URL: %s", job_url)
 
-            self.seen_job_urls.add(job_url)
+            # Check for duplicates in this batch
+            if job_id:
+                if job_id in seen_job_ids:
+                    logger.warning("🔄 DUPLICATE job_id in batch: %s - skipping", job_id)
+                    continue
+                seen_job_ids.add(job_id)
+                
+                should_process = self.rt_db.should_process(job_id)
+                logger.info("Job %s should_process: %s", job_id[:20] + "..." if len(job_id) > 20 else job_id, should_process)
+                
+                if not should_process:
+                    logger.info("⏭️  Skipping job %s (already processed recently)", job_id[:20] + "..." if len(job_id) > 20 else job_id)
+                    continue
+                else:
+                    logger.info("✅ Adding job %s to processing queue", job_id[:20] + "..." if len(job_id) > 20 else job_id)
+            else:
+                logger.warning("⚠️  No job_id extracted, will process anyway: %s", job_url)
+
             new_job_urls.append(job_url)
 
         logger.info(
-            "Found %s new job URLs on page (total processed=%s)",
+            "📊 Found %s unique job_ids, %s new URLs to process (total processed=%s)",
+            len(seen_job_ids),
             len(new_job_urls),
             len(self.comprehensive_jobs_found),
         )
@@ -192,7 +227,12 @@ class UpworkJobService:
 
             if tasks:
                 await asyncio.gather(*tasks, return_exceptions=True)
-                logger.info(f"Completed batch {batch_num}/{total_batches}")
+                # Count successful vs failed jobs in this batch
+                successful_count = len([job for job in self.comprehensive_jobs_found if 'error' not in job or job.get('error') is None])
+                failed_count = len(self.comprehensive_jobs_found) - successful_count
+                
+                logger.info("Completed batch %d/%d - Successful: %d, Failed: %d, Total processed: %d", 
+                           batch_num, total_batches, successful_count, failed_count, len(self.comprehensive_jobs_found))
 
                 # Add delay between batches to be respectful
                 if i + batch_size < total_jobs:  # Don't delay after the last batch
@@ -251,6 +291,9 @@ class UpworkJobService:
 
             try:
                 self.driver.wait_for('h1, [data-test="job-title"]', timeout=15)
+                # Additional wait for dynamic content to load
+                import time
+                time.sleep(2)  # Give the page more time to load completely
             except Exception:
                 logger.debug("Job title element not found immediately on detail page")
 
@@ -258,37 +301,71 @@ class UpworkJobService:
             detailed_info = self._extract_job_details()
 
             if detailed_info and isinstance(detailed_info, dict):
-                # Create clean job data structure
-                clean_job_data = detailed_info
+                
+                try:
+                    # Create clean job data structure
+                    clean_job_data = JobData(**detailed_info)
+                    
+                    clean_job_data.set_url(job_url)
+                    logger.info("🔗 JobData object created with job_id: '%s'", clean_job_data.job_id)
 
-                clean_job_data["url"] = job_url
-                clean_job_data["visited_at"] = datetime.now().isoformat()
+                    # Mark job as seen in RocksDB
+                    self.rt_db.do_seen(clean_job_data)
+                    logger.info("✅ Marked job %s as SEEN in database", clean_job_data.job_id[:20] + "..." if len(clean_job_data.job_id or "") > 20 else clean_job_data.job_id)
 
-                # Store for tracking
-                self.comprehensive_jobs_found.append(clean_job_data)
+                    # Store for tracking
+                    self.comprehensive_jobs_found.append(clean_job_data.model_dump())
 
-                # Push clean data
-                await Actor.push_data(clean_job_data)
-                logger.debug("Pushed job data for %s", clean_job_data.get("title") or job_url)
+                    # Push clean data
+                    if self.data_store:
+                        await self.data_store.push_data(clean_job_data.model_dump())
+                    logger.info("Successfully processed job: %s", clean_job_data.title or clean_job_data.job_id or job_url)
+                    
+                except Exception as validation_exc:
+                    # Handle validation errors gracefully - data doesn't meet JobData requirements
+                    logger.warning("Job data validation failed for %s: %s", job_url, validation_exc)
+                    
+                    # Record the failed extraction with detailed information
+                    failed_job = FailedJobExtraction(
+                        url=job_url,
+                        error_message=f"Data validation failed: {validation_exc}",
+                        raw_data=detailed_info
+                    )
+                    self.rt_db.record_failed_extraction(failed_job)
+                    
+                    # Continue processing other jobs instead of crashing
+                    return
             else:
-                # Fallback for failed extraction
-                fallback = {
-                    "type": "job",
-                    "url": job_url,
-                    "error": "extraction_failed",
-                    "processed_at": datetime.now().isoformat(),
-                }
-                await Actor.push_data(fallback)
+                # No data extracted at all
+                logger.warning("No data extracted for job URL: %s", job_url)
+                failed_job = FailedJobExtraction(
+                    url=job_url,
+                    error_message="No data could be extracted from job page",
+                    raw_data=detailed_info
+                )
+                self.rt_db.record_failed_extraction(failed_job)
 
         except Exception as exc:
             logger.error("Failed to extract job for %s: %s", job_url, exc, exc_info=True)
+            
+            # Record the failed extraction
+            failed_job = FailedJobExtraction(
+                url=job_url,
+                error_message=f"Extraction error: {exc}",
+                raw_data=None
+            )
+            self.rt_db.record_failed_extraction(failed_job)
+            
+            # Still store a minimal fallback entry for compatibility
             fallback = {
                 "type": "job",
                 "url": job_url,
                 "error": str(exc),
                 "processed_at": datetime.now().isoformat(),
+                "extraction_status": "failed"
             }
-            await Actor.push_data(fallback)
+            if self.data_store:
+                await self.data_store.push_data(fallback)
         finally:
             try:
                 logger.debug(f"Closing tab for job URL: {job_url}")
@@ -386,14 +463,10 @@ class UpworkJobService:
             current_pid = os.getpid()
 
             # Find and kill any Chrome processes with our temp directory pattern
-            result = subprocess.run(
-                ["pgrep", "-f", "bota.*chrome"],
-                capture_output=True,
-                text=True
-            )
+            result = subprocess.run(["pgrep", "-f", "bota.*chrome"], capture_output=True, text=True)
 
             if result.stdout:
-                pids = result.stdout.strip().split('\n')
+                pids = result.stdout.strip().split("\n")
                 for pid_str in pids:
                     try:
                         pid = int(pid_str)
@@ -405,5 +478,12 @@ class UpworkJobService:
 
         except Exception as cleanup_exc:
             logger.debug("Additional cleanup failed: %s", cleanup_exc)
+
+        # Close RocksDB connection
+        try:
+            self.rt_db.close()
+            logger.info("RocksDB connection closed")
+        except Exception as db_cleanup_exc:
+            logger.debug("RocksDB cleanup failed: %s", db_cleanup_exc)
 
         logger.info("Service cleanup completed")

@@ -1,26 +1,16 @@
-version: '3.8'
-
 services:
   upwork-job-listing-scraper:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: upwork-job-listing-scraper
-    environment:
-      # Apify configuration
-      - APIFY_LOCAL_STORAGE_DIR=/app/storage
-      - APIFY_LOG_LEVEL=INFO
-      # Add other environment variables from .env file
-      - APIFY_TOKEN=${APIFY_TOKEN:-}
-      - APIFY_PROXY_GROUP=${APIFY_PROXY_GROUP:-}
-      - APIFY_PROXY_PASSWORD=${APIFY_PROXY_PASSWORD:-}
-      # Browser configuration
-      - PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
     volumes:
       # Mount storage directory for persistent data
       - ./storage:/app/storage
       # Mount logs directory
       - ./logs:/app/logs
+      # Mount SQLite data directory for persistent job tracking
+      - sqlite_data:/app/sqlite_data
       # Optional: mount source code for development (uncomment for dev mode)
       # - ./src:/app/src
     ports:
@@ -42,22 +32,21 @@ services:
       start_period: 40s
     # Run as non-root user for security
     user: "1000:1000"
+    environment:
+      # Application configuration
+      - LOCAL_STORAGE_DIR=/app/storage
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
 
-  # Optional: Redis for caching (uncomment if needed)
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: upwork-scraper-redis
-  #   restart: unless-stopped
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #   command: redis-server --appendonly yes
+      # Proxy configuration (new environment variables)
+      - PROXY_URL=${PROXY_URL:-}
 
-# Optional: volumes for persistent data
-# volumes:
-#   redis_data:
-#     driver: local
+      # Database configuration
+      - ROCKSDB_DATA_DIR=/app/sqlite_data
+
+# Volumes for persistent data
+volumes:
+  sqlite_data:
+    driver: local
 
 networks:
   default:

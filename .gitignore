@@ -141,9 +141,6 @@ profile.json
 past_proposals.json
 keywords.json
 
-# UV lock file (if using uv package manager)
-uv.lock
-
 # Backup files
 *.bak
 *.backup

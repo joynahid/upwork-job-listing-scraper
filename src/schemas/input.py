@@ -193,11 +193,13 @@ class ActorInput(BaseModel):
     )
 
     max_jobs: int = Field(
-        50,
+        10,
         ge=1,
-        le=1000,
+        le=50,
         description="Maximum number of jobs to process"
     )
+
+
 
     # Rate limiting
     delay_min: float = Field(
@@ -208,7 +210,7 @@ class ActorInput(BaseModel):
     )
 
     delay_max: float = Field(
-        5.0,
+        60.0,
         ge=1.0,
         le=60.0,
         description="Maximum delay between requests in seconds"
