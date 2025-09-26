@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     xvfb \
     x11vnc \
+    x11-utils \
     fluxbox \
     dbus-x11 \
     fonts-liberation \
@@ -55,6 +56,9 @@ RUN apt-get update && apt-get install -y wget
 RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 RUN apt-get update && apt-get install -y -f ./google-chrome-stable_current_amd64.deb
 
+# Create a non-root user
+RUN useradd -m -u 1000 -s /bin/bash appuser
+
 # Set working directory
 WORKDIR /app
 
@@ -84,8 +88,16 @@ RUN python3 -m compileall -q src/
 # Create storage directory
 RUN mkdir -p /app/storage
 
-# Create runtime cache directory and change ownership of entire app directory
-RUN mkdir -p /app/.cache/uv && chown -R 1000:1000 /app
+# Create all necessary directories and set comprehensive permissions
+RUN mkdir -p /app/.cache/uv /app/.npm /app/.npm-global /app/storage /app/logs /app/sqlite_data && \
+    chown -R 1000:1000 /app && \
+    chmod -R 755 /app && \
+    if [ -d "/app/.venv" ]; then chown -R 1000:1000 /app/.venv && chmod -R 755 /app/.venv; fi && \
+    # Ensure executable permissions for Python and binaries in venv
+    if [ -d "/app/.venv/bin" ]; then chmod -R 755 /app/.venv/bin; fi && \
+    # Set permissions for common system directories that might be accessed
+    chmod 1777 /tmp && \
+    chown -R 1000:1000 /home/appuser && chmod -R 755 /home/appuser
 
 # Set runtime UV environment variables for non-root user
 ENV UV_CACHE_DIR=/app/.cache/uv
@@ -94,6 +106,11 @@ ENV UV_NO_CACHE=0
 # Set npm environment variables for non-root user
 ENV NPM_CONFIG_CACHE=/app/.npm
 ENV NPM_CONFIG_PREFIX=/app/.npm-global
+
+# Set user environment variables
+ENV HOME=/home/appuser
+ENV USER=appuser
+ENV LOGNAME=appuser
 
 # Chrome/Browser environment variables for Docker
 ENV DISPLAY=:99
@@ -104,14 +121,36 @@ ENV GOOGLE_CHROME_BIN=/usr/bin/google-chrome
 
 # Create startup script for Chrome in Docker
 RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Clean up any existing X server lock files\n\
+rm -f /tmp/.X99-lock\n\
+\n\
+# Kill any existing Xvfb processes on display 99\n\
+pkill -f "Xvfb :99" || true\n\
+\n\
+# Wait a moment for cleanup\n\
+sleep 1\n\
+\n\
 # Start Xvfb for headless display\n\
+echo "Starting Xvfb..."\n\
 Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset &\n\
+XVFB_PID=$!\n\
 export DISPLAY=:99\n\
 \n\
 # Wait for display to be ready\n\
-sleep 2\n\
+echo "Waiting for display to be ready..."\n\
+sleep 3\n\
 \n\
-# Start the application\n\
+# Verify display is working\n\
+if ! xdpyinfo -display :99 >/dev/null 2>&1; then\n\
+    echo "ERROR: Display :99 is not ready"\n\
+    exit 1\n\
+fi\n\
+\n\
+echo "Display :99 is ready. Starting application..."\n\
+\n\
+# Start the application with proper error handling\n\
 UV_CACHE_DIR=/app/.cache/uv uv run python -m src\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
