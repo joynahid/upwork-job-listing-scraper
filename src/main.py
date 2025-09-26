@@ -117,7 +117,7 @@ async def main() -> None:
                 "search_parameters": {
                     "sort_by": "recency",
                     "payment_verified": True,
-                    "keywords": "python automation",
+                    "keywords": "",
                 },
                 "max_jobs": 10,
                 "delay_min": 2.0,
