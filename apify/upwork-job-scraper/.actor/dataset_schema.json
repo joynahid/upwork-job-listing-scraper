@@ -1,8 +1,10 @@
 {
-    "title": "Upwork Job Listings",
-    "type": "object",
-    "schemaVersion": 1,
-    "properties": {
+    "actorSpecification": 1,
+    "fields": {
+        "title": "Upwork Job Listings",
+        "type": "object",
+        "schemaVersion": 1,
+        "properties": {
         "job_id": {
             "title": "Job ID",
             "type": "string",
@@ -145,7 +147,8 @@
             "description": "Complete raw data from the API response (when include_raw_data is enabled)"
         }
     },
-    "required": ["job_id", "title", "url", "scraped_at"],
+    "required": ["job_id", "title", "url", "scraped_at"]
+    },
     "views": {
         "overview": {
             "title": "Job Overview",
