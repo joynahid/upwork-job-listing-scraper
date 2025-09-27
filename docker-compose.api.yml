@@ -16,7 +16,7 @@ services:
       - FIRESTORE_COLLECTION=${FIRESTORE_COLLECTION:-individual_jobs}
       - FIRESTORE_JOB_LIST_COLLECTION=${FIRESTORE_JOB_LIST_COLLECTION:-job_list}
     volumes:
-      - ./upwork-job-scraper-d1f2c-firebase-adminsdk-fbsvc-3c0e2df938.json:/app/config/firebase-service-account.json:ro
+      - /root/upwork-job-scraper-d1f2c-firebase-adminsdk-fbsvc-3c0e2df938.json:/app/config/firebase-service-account.json:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "--header=X-API-KEY: ${API_KEY:-your-secret-api-key-here}", "http://localhost:8080/health"]
