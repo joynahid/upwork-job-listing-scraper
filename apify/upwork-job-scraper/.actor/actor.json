@@ -24,6 +24,7 @@
 		]
 	},
 	"input": "./input_schema.json",
+	"dataset": "./dataset_schema.json",
 	"dockerfile": "./Dockerfile",
 	"environmentVariables": {
 		"API_ENDPOINT": "http://localhost:8080",

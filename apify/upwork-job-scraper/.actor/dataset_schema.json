@@ -1,0 +1,224 @@
+{
+    "title": "Upwork Job Listings",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "job_id": {
+            "title": "Job ID",
+            "type": "string",
+            "description": "Unique identifier for the job posting",
+            "example": "~01234567890abcdef"
+        },
+        "title": {
+            "title": "Job Title",
+            "type": "string",
+            "description": "The title of the job posting",
+            "example": "Python Developer for Web Scraping Project"
+        },
+        "description": {
+            "title": "Job Description", 
+            "type": "string",
+            "description": "Full description of the job requirements and details",
+            "example": "We are looking for an experienced Python developer to build a web scraping solution..."
+        },
+        "url": {
+            "title": "Job URL",
+            "type": "string",
+            "description": "Direct link to the job posting on Upwork",
+            "example": "https://www.upwork.com/jobs/~01234567890abcdef",
+            "format": "uri"
+        },
+        "hourly_rate": {
+            "title": "Hourly Rate",
+            "type": "object",
+            "description": "Hourly rate information for the job",
+            "properties": {
+                "min": {
+                    "title": "Minimum Rate",
+                    "type": "number",
+                    "description": "Minimum hourly rate in USD"
+                },
+                "max": {
+                    "title": "Maximum Rate", 
+                    "type": "number",
+                    "description": "Maximum hourly rate in USD"
+                },
+                "currency": {
+                    "title": "Currency",
+                    "type": "string",
+                    "description": "Currency code (usually USD)"
+                }
+            }
+        },
+        "budget": {
+            "title": "Project Budget",
+            "type": "object", 
+            "description": "Fixed price budget information",
+            "properties": {
+                "amount": {
+                    "title": "Budget Amount",
+                    "type": "number",
+                    "description": "Fixed project budget amount"
+                },
+                "currency": {
+                    "title": "Currency",
+                    "type": "string",
+                    "description": "Currency code (usually USD)"
+                }
+            }
+        },
+        "experience_level": {
+            "title": "Experience Level",
+            "type": "string",
+            "description": "Required experience level for the job",
+            "example": "Intermediate",
+            "enum": ["Entry Level", "Intermediate", "Expert"]
+        },
+        "job_type": {
+            "title": "Job Type",
+            "type": "string", 
+            "description": "Type of job posting",
+            "example": "Fixed Price",
+            "enum": ["Hourly", "Fixed Price"]
+        },
+        "skills": {
+            "title": "Required Skills",
+            "type": "array",
+            "description": "List of skills required for the job",
+            "items": {
+                "type": "string"
+            },
+            "example": ["Python", "Web Scraping", "BeautifulSoup", "Selenium"]
+        },
+        "client_location": {
+            "title": "Client Location",
+            "type": "string",
+            "description": "Geographic location of the client",
+            "example": "United States"
+        },
+        "posted_date": {
+            "title": "Posted Date",
+            "type": "string",
+            "description": "When the job was posted",
+            "example": "2024-01-15T10:30:00Z",
+            "format": "date-time"
+        },
+        "proposals_count": {
+            "title": "Number of Proposals",
+            "type": "integer",
+            "description": "Number of proposals submitted for this job",
+            "example": 15,
+            "minimum": 0
+        },
+        "last_visited_at": {
+            "title": "Last Visited",
+            "type": "string",
+            "description": "When this job was last checked by the scraper",
+            "format": "date-time"
+        },
+        "scraped_at": {
+            "title": "Scraped At",
+            "type": "string", 
+            "description": "When this data was extracted",
+            "format": "date-time"
+        },
+        "raw_data": {
+            "title": "Raw Data",
+            "type": "object",
+            "description": "Complete raw data from the API response (when include_raw_data is enabled)"
+        }
+    },
+    "required": ["job_id", "title", "url", "scraped_at"],
+    "views": {
+        "overview": {
+            "title": "Job Overview",
+            "transformation": {
+                "fields": [
+                    "title",
+                    "experience_level", 
+                    "job_type",
+                    "client_location",
+                    "proposals_count",
+                    "posted_date"
+                ]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "title": {
+                        "label": "Job Title",
+                        "format": "text"
+                    },
+                    "experience_level": {
+                        "label": "Experience",
+                        "format": "tag"
+                    },
+                    "job_type": {
+                        "label": "Type", 
+                        "format": "tag"
+                    },
+                    "client_location": {
+                        "label": "Location",
+                        "format": "text"
+                    },
+                    "proposals_count": {
+                        "label": "Proposals",
+                        "format": "number"
+                    },
+                    "posted_date": {
+                        "label": "Posted",
+                        "format": "datetime"
+                    }
+                }
+            }
+        },
+        "detailed": {
+            "title": "Detailed View",
+            "transformation": {
+                "fields": [
+                    "title",
+                    "description", 
+                    "hourly_rate",
+                    "budget",
+                    "skills",
+                    "experience_level",
+                    "job_type",
+                    "client_location",
+                    "proposals_count",
+                    "posted_date",
+                    "url"
+                ]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "title": {
+                        "label": "Title",
+                        "format": "text"
+                    },
+                    "description": {
+                        "label": "Description", 
+                        "format": "text",
+                        "truncate": 100
+                    },
+                    "hourly_rate": {
+                        "label": "Hourly Rate",
+                        "format": "object"
+                    },
+                    "budget": {
+                        "label": "Budget",
+                        "format": "object" 
+                    },
+                    "skills": {
+                        "label": "Skills",
+                        "format": "array"
+                    },
+                    "url": {
+                        "label": "Job Link",
+                        "format": "link"
+                    }
+                }
+            }
+        }
+    }
+}
