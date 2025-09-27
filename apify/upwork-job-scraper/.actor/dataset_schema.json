@@ -32,25 +32,25 @@
         },
         "hourly_rate": {
             "title": "Hourly Rate",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Hourly rate range for the job",
-            "example": "$25.00 - $47.00/hr"
+            "example": "$15.00 - $30.00/hr"
         },
         "budget": {
             "title": "Project Budget",
-            "type": "string", 
+            "type": ["string", "null"], 
             "description": "Fixed price budget for the project",
-            "example": "$400.00"
+            "example": "$100.00"
         },
         "experience_level": {
             "title": "Experience Level",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Required experience level for the job",
             "example": "Intermediate"
         },
         "job_type": {
             "title": "Job Type",
-            "type": "string", 
+            "type": ["string", "null"], 
             "description": "Type of job posting",
             "example": "Fixed-price"
         },
@@ -65,69 +65,117 @@
         },
         "client_location": {
             "title": "Client Location",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Geographic location of the client",
-            "example": "United States"
+            "example": "AUS"
         },
         "client_company_size": {
             "title": "Client Company Size",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Size of the client's company",
-            "example": "Mid-sized company (10-99 people)"
+            "example": "Individual client"
         },
         "client_industry": {
             "title": "Client Industry",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Industry sector of the client",
-            "example": "Health & Fitness"
+            "example": "Tech & IT"
+        },
+        "client_local_time": {
+            "title": "Client Local Time",
+            "type": ["string", "null"],
+            "description": "Client's local time when job was scraped",
+            "example": "4:17 PM"
         },
         "posted_date": {
             "title": "Posted Date",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "When the job was posted (relative time)",
-            "example": "Posted 11 minutes ago"
+            "example": "Posted 36 seconds ago"
         },
         "proposals_count": {
             "title": "Number of Proposals",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Number of proposals submitted for this job",
             "example": "Less than 5"
         },
         "duration": {
             "title": "Project Duration",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Expected duration of the project",
             "example": "1-3 months"
         },
         "project_type": {
             "title": "Project Type",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Type of project engagement",
             "example": "One-time project"
         },
         "work_hours": {
             "title": "Work Hours",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Expected weekly work hours",
-            "example": "Less than 30 hrs/week"
+            "example": "More than 30 hrs/week"
         },
         "member_since": {
             "title": "Client Member Since",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "When the client joined Upwork",
-            "example": "Oct 20, 2015"
+            "example": "Jun 19, 2025"
         },
         "total_spent": {
             "title": "Total Client Spending",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Total amount the client has spent on Upwork",
-            "example": "$23K"
+            "example": "$250"
         },
         "total_hires": {
             "title": "Total Hires",
-            "type": "string",
+            "type": ["string", "null"],
             "description": "Total number of freelancers hired by the client",
-            "example": "59"
+            "example": "6"
+        },
+        "total_active": {
+            "title": "Total Active Jobs",
+            "type": ["string", "null"],
+            "description": "Number of active jobs the client has",
+            "example": "2"
+        },
+        "total_client_hours": {
+            "title": "Total Client Hours",
+            "type": ["string", "null"],
+            "description": "Total hours the client has hired for",
+            "example": "50"
+        },
+        "interviewing": {
+            "title": "Interviewing Count",
+            "type": ["string", "null"],
+            "description": "Number of freelancers currently being interviewed",
+            "example": "0"
+        },
+        "invites_sent": {
+            "title": "Invites Sent",
+            "type": ["string", "null"],
+            "description": "Number of invites sent by the client",
+            "example": "0"
+        },
+        "unanswered_invites": {
+            "title": "Unanswered Invites",
+            "type": ["string", "null"],
+            "description": "Number of unanswered invites",
+            "example": "0"
+        },
+        "hires": {
+            "title": "Current Hires",
+            "type": ["string", "null"],
+            "description": "Number of current hires for this job",
+            "example": null
+        },
+        "last_viewed_by_client": {
+            "title": "Last Viewed by Client",
+            "type": ["string", "null"],
+            "description": "When the client last viewed this job",
+            "example": null
         },
         "last_visited_at": {
             "title": "Last Visited",

@@ -136,23 +136,31 @@ async def process_jobs_simple(
                 "title": job_data.get("title") or "No title",
                 "description": job_data.get("description") or "",
                 "url": job_data.get("url") or "",
-                "hourly_rate": job_data.get("hourly_rate") or None,
-                "budget": job_data.get("budget") or None,
-                "experience_level": job_data.get("experience_level") or None,
-                "job_type": job_data.get("job_type") or None,
+                "hourly_rate": job_data.get("hourly_rate"),
+                "budget": job_data.get("budget"),
+                "experience_level": job_data.get("experience_level"),
+                "job_type": job_data.get("job_type"),
                 "skills": job_data.get("skills") or [],
-                "client_location": job_data.get("client_location") or None,
-                "client_company_size": job_data.get("client_company_size") or None,
-                "client_industry": job_data.get("client_industry") or None,
-                "posted_date": job_data.get("posted_date") or None,
-                "proposals_count": job_data.get("proposals_count") or None,
-                "duration": job_data.get("duration") or None,
-                "project_type": job_data.get("project_type") or None,
-                "work_hours": job_data.get("work_hours") or None,
-                "member_since": job_data.get("member_since") or None,
-                "total_spent": job_data.get("total_spent") or None,
-                "total_hires": job_data.get("total_hires") or None,
-                "last_visited_at": job.get("last_visited_at") or None,
+                "client_location": job_data.get("client_location"),
+                "client_company_size": job_data.get("client_company_size"),
+                "client_industry": job_data.get("client_industry"),
+                "client_local_time": job_data.get("client_local_time"),
+                "posted_date": job_data.get("posted_date"),
+                "proposals_count": job_data.get("proposals_count"),
+                "duration": job_data.get("duration"),
+                "project_type": job_data.get("project_type"),
+                "work_hours": job_data.get("work_hours"),
+                "member_since": job_data.get("member_since"),
+                "total_spent": job_data.get("total_spent"),
+                "total_hires": job_data.get("total_hires"),
+                "total_active": job_data.get("total_active"),
+                "total_client_hours": job_data.get("total_client_hours"),
+                "interviewing": job_data.get("interviewing"),
+                "invites_sent": job_data.get("invites_sent"),
+                "unanswered_invites": job_data.get("unanswered_invites"),
+                "hires": job_data.get("hires"),
+                "last_viewed_by_client": job_data.get("last_viewed_by_client"),
+                "last_visited_at": job.get("last_visited_at"),
                 "scraped_at": datetime.now().isoformat(),
             }
 
@@ -160,8 +168,8 @@ async def process_jobs_simple(
             if include_raw_data:
                 output_job["raw_data"] = job
 
-            # Push to Apify dataset
-            await Actor.push_data(output_job)
+            # Push to Apify dataset with pay-per-event charging
+            await Actor.push_data(output_job, 'job-processed')
 
             processed_count += 1
 
@@ -177,6 +185,8 @@ async def process_jobs_simple(
 
         except Exception as e:
             Actor.log.error(f"❌ Failed to process job: {e}")
+            if debug_mode:
+                Actor.log.error(f"   Job data: {job}")
             continue
 
     Actor.log.info(f"🎉 Processing completed: {processed_count} jobs saved")
@@ -249,15 +259,17 @@ async def main() -> None:
                 jobs, include_raw_data, debug_mode, max_jobs
             )
 
-            # Add usage tracking - charge for actual jobs processed
-            usage_count = min(max_jobs, len(jobs))
-            charge_result = await Actor.charge(user_credit=usage_count)
-            Actor.log.info(f"💰 Usage tracked: {usage_count} jobs processed")
-            
-            if charge_result and hasattr(charge_result, 'done') and charge_result.done:
-                Actor.log.info("User-configured maximum cost reached. Finishing run.")
-                await Actor.exit()
-                return
+            # Add usage tracking - charge for actual jobs processed using pay-per-event
+            try:
+                # Charge for initialization
+                await Actor.charge(event_name='actor-init')
+                
+                # Charge for each job processed (this is handled automatically by push_data with event_name)
+                Actor.log.info(f"💰 Usage tracked: {processed_count} jobs processed with pay-per-event charging")
+                
+            except Exception as e:
+                Actor.log.warning(f"⚠️ Usage tracking failed: {e}")
+                # Continue execution even if charging fails
 
             # Store run summary
             summary = {
