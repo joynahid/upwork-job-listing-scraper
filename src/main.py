@@ -111,33 +111,18 @@ async def main() -> None:
         storage_dir = os.getenv("LOCAL_STORAGE_DIR", "./storage")
         data_store = SimpleDataStore(storage_dir)
 
-        try:
-            # If no input provided, use default configuration with recency sorting
-            actor_input_raw = {
-                "search_parameters": {
-                    "sort_by": "recency",
-                    "payment_verified": True,
-                    "keywords": "",
-                },
-                "max_jobs": 10,
-                "delay_min": 2.0,
-                "delay_max": 5.0,
-                "debug_mode": True,
-            }
-            logger.info("Using default input configuration with recency sorting")
+        # If no input provided, use default configuration with recency sorting
+        actor_input_raw = {
+            "search_parameters": {
+                "sort_by": "recency",
+            },
+            "max_jobs": 10,
+            "debug_mode": True,
+        }
 
-            actor_input = ActorInput(**actor_input_raw)
-        except Exception as e:
-            logger.error(f"Invalid input configuration: {e}")
-            # Try with minimal default configuration
-            try:
-                logger.info("Attempting to use minimal default configuration")
-                actor_input = ActorInput(
-                    max_jobs=10, delay_min=2.0, delay_max=5.0, debug_mode=True
-                )
-            except Exception as e2:
-                logger.error(f"Failed to create default configuration: {e2}")
-                return
+        logger.info("Using default input configuration with recency sorting")
+
+        actor_input = ActorInput(**actor_input_raw)
 
         logger.info("Starting Upwork job listing scraper")
         if actor_input.debug_mode:
