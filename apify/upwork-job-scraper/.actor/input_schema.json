@@ -1,0 +1,17 @@
+{
+    "title": "Upwork Job Scraper API Wrapper",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "maxJobs": {
+            "title": "Maximum Jobs",
+            "type": "integer",
+            "description": "Maximum number of jobs to fetch and process",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 50,
+            "editor": "number"
+        }
+    },
+    "required": []
+}

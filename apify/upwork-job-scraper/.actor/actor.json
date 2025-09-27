@@ -1,0 +1,32 @@
+{
+	"actorSpecification": 1,
+	"name": "live-upwork-job-scraper",
+	"title": "Live Upwork Job Scraper",
+	"description": "Real-time Upwork job listings scraper with advanced bot detection evasion, Cloudflare bypass, and comprehensive data extraction. Get fresh job postings with client details, budgets, skills, and competition analysis. Perfect for freelancers, agencies, and job market research.",
+	"version": "0.1",
+	"buildTag": "latest",
+	"meta": {
+		"templateId": "python-beautifulsoup",
+		"categories": ["BUSINESS", "ECOMMERCE", "JOBS"],
+		"keywords": [
+			"upwork",
+			"job scraper",
+			"freelance jobs",
+			"job listings",
+			"real-time data",
+			"bot detection evasion",
+			"cloudflare bypass",
+			"job market research",
+			"freelancer tools",
+			"upwork automation",
+			"job monitoring",
+			"competitive intelligence"
+		]
+	},
+	"input": "./input_schema.json",
+	"dockerfile": "./Dockerfile",
+	"environmentVariables": {
+		"API_ENDPOINT": "http://localhost:8080",
+		"API_KEY": "@apiKey"
+	}
+}
