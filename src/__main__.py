@@ -2,6 +2,7 @@ import asyncio
 import signal
 import sys
 import logging
+from time import sleep
 from typing import Optional
 
 from .main import main
@@ -39,9 +40,10 @@ async def run_main_with_shutdown():
     global _main_task
 
     try:
-        _main_task = asyncio.create_task(main())
-        await _main_task
-        return 0
+        while not _shutdown_requested:
+            _main_task = asyncio.create_task(main())
+            await _main_task
+            sleep(30)
     except asyncio.CancelledError:
         logger.info("Main task was cancelled - cleanup completed")
         # Re-raise to properly propagate cancellation
