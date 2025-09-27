@@ -169,7 +169,7 @@ async def process_jobs_simple(
                 output_job["raw_data"] = job
 
             # Push to Apify dataset with pay-per-event charging
-            await Actor.push_data(output_job, 'job-processed')
+            await Actor.push_data(output_job, 'api-result')
 
             processed_count += 1
 
@@ -264,8 +264,8 @@ async def main() -> None:
                 # Charge for initialization
                 await Actor.charge(event_name='actor-init')
                 
-                # Charge for each job processed (this is handled automatically by push_data with event_name)
-                Actor.log.info(f"💰 Usage tracked: {processed_count} jobs processed with pay-per-event charging")
+                # Charge for each job processed (this is handled automatically by push_data with 'api-result' event_name)
+                Actor.log.info(f"💰 Usage tracked: {processed_count} jobs processed with 'api-result' pay-per-event charging")
                 
             except Exception as e:
                 Actor.log.warning(f"⚠️ Usage tracking failed: {e}")
