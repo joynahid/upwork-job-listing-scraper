@@ -147,7 +147,7 @@
             "description": "Complete raw data from the API response (when include_raw_data is enabled)"
         }
     },
-    "required": ["job_id", "title", "url", "scraped_at"]
+    "required": ["job_id", "title", "scraped_at"]
     },
     "views": {
         "overview": {

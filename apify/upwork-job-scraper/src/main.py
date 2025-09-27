@@ -132,27 +132,27 @@ async def process_jobs_simple(
             # Transform job data for Apify output
             job_data = job.get("data", {})
             output_job = {
-                "job_id": job.get("job_id"),
-                "title": job_data.get("title", "No title"),
-                "description": job_data.get("description", ""),
-                "url": job_data.get("url", ""),
-                "hourly_rate": job_data.get("hourly_rate"),
-                "budget": job_data.get("budget"),
-                "experience_level": job_data.get("experience_level"),
-                "job_type": job_data.get("job_type"),
-                "skills": job_data.get("skills", []),
-                "client_location": job_data.get("client_location"),
-                "client_company_size": job_data.get("client_company_size"),
-                "client_industry": job_data.get("client_industry"),
-                "posted_date": job_data.get("posted_date"),
-                "proposals_count": job_data.get("proposals_count"),
-                "duration": job_data.get("duration"),
-                "project_type": job_data.get("project_type"),
-                "work_hours": job_data.get("work_hours"),
-                "member_since": job_data.get("member_since"),
-                "total_spent": job_data.get("total_spent"),
-                "total_hires": job_data.get("total_hires"),
-                "last_visited_at": job.get("last_visited_at"),
+                "job_id": job.get("job_id") or "unknown",
+                "title": job_data.get("title") or "No title",
+                "description": job_data.get("description") or "",
+                "url": job_data.get("url") or "",
+                "hourly_rate": job_data.get("hourly_rate") or None,
+                "budget": job_data.get("budget") or None,
+                "experience_level": job_data.get("experience_level") or None,
+                "job_type": job_data.get("job_type") or None,
+                "skills": job_data.get("skills") or [],
+                "client_location": job_data.get("client_location") or None,
+                "client_company_size": job_data.get("client_company_size") or None,
+                "client_industry": job_data.get("client_industry") or None,
+                "posted_date": job_data.get("posted_date") or None,
+                "proposals_count": job_data.get("proposals_count") or None,
+                "duration": job_data.get("duration") or None,
+                "project_type": job_data.get("project_type") or None,
+                "work_hours": job_data.get("work_hours") or None,
+                "member_since": job_data.get("member_since") or None,
+                "total_spent": job_data.get("total_spent") or None,
+                "total_hires": job_data.get("total_hires") or None,
+                "last_visited_at": job.get("last_visited_at") or None,
                 "scraped_at": datetime.now().isoformat(),
             }
 
@@ -251,8 +251,13 @@ async def main() -> None:
 
             # Add usage tracking - charge for actual jobs processed
             usage_count = min(max_jobs, len(jobs))
-            await Actor.add_usage("api-result", usage_count * 0.001)
-            Actor.log.info(f"💰 Usage tracked: {usage_count} jobs (Charged for {len(jobs)} jobs processed)")
+            charge_result = await Actor.charge(user_credit=usage_count)
+            Actor.log.info(f"💰 Usage tracked: {usage_count} jobs processed")
+            
+            if charge_result and hasattr(charge_result, 'done') and charge_result.done:
+                Actor.log.info("User-configured maximum cost reached. Finishing run.")
+                await Actor.exit()
+                return
 
             # Store run summary
             summary = {
