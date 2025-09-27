@@ -1,25 +1,4 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: upwork-postgres
-    environment:
-      - POSTGRES_DB=upwork_jobs
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    # Security options
-    security_opt:
-      - no-new-privileges:true
-
   upwork-job-listing-scraper:
     build:
       context: .
@@ -44,44 +23,6 @@ services:
       # Application configuration
       - LOCAL_STORAGE_DIR=/app/storage
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-
-      # Proxy configuration
-      - PROXY_URL=${PROXY_URL:-}
-
-      # PostgreSQL configuration
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=upwork_jobs
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: upwork-pgadmin
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@upwork.local
-      - PGADMIN_DEFAULT_PASSWORD=admin
-      - PGADMIN_CONFIG_SERVER_MODE=False
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    ports:
-      - "8081:80"
-    restart: unless-stopped
-    depends_on:
-      - postgres
-    # Security options
-    security_opt:
-      - no-new-privileges:true
-
-# Volumes for persistent data
-volumes:
-  postgres_data:
-    driver: local
-  pgadmin_data:
-    driver: local
 
 networks:
   default:

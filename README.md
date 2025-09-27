@@ -220,8 +220,7 @@ Built with:
 Copy `env.example` to `.env` and configure:
 
 - `APIFY_TOKEN` - Your Apify API token
-- `APIFY_PROXY_GROUP` - Proxy group (RESIDENTIAL recommended)
-- `APIFY_PROXY_PASSWORD` - Proxy password
+- `PROXY_URL` - Upstream proxy URL (e.g. Squid or direct provider)
 - `APIFY_LOG_LEVEL` - Logging level (INFO, DEBUG)
 - `HEADLESS` - Run browser in headless mode (true/false)
 

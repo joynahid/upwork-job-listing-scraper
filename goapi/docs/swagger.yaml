@@ -1,0 +1,383 @@
+definitions:
+  server.BudgetInfo:
+    properties:
+      currency:
+        type: string
+      fixed_amount:
+        type: number
+    type: object
+  server.BuyerInfo:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      payment_verified:
+        type: boolean
+      timezone:
+        type: string
+      total_assignments:
+        type: integer
+      total_jobs_with_hires:
+        type: integer
+      total_spent:
+        type: number
+    type: object
+  server.CategoryInfo:
+    properties:
+      group:
+        type: string
+      group_slug:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  server.ClientActivity:
+    properties:
+      invitations_sent:
+        type: integer
+      last_buyer_activity:
+        type: string
+      total_applicants:
+        type: integer
+      total_hired:
+        type: integer
+      total_invited_to_interview:
+        type: integer
+      unanswered_invites:
+        type: integer
+    type: object
+  server.HourlyBudget:
+    properties:
+      currency:
+        type: string
+      max:
+        type: number
+      min:
+        type: number
+    type: object
+  server.JobDTO:
+    properties:
+      budget:
+        $ref: '#/definitions/server.BudgetInfo'
+      buyer:
+        $ref: '#/definitions/server.BuyerInfo'
+      category:
+        $ref: '#/definitions/server.CategoryInfo'
+      client_activity:
+        $ref: '#/definitions/server.ClientActivity'
+      contractor_tier:
+        type: integer
+      description:
+        type: string
+      duration_label:
+        type: string
+      engagement:
+        type: string
+      hourly_budget:
+        $ref: '#/definitions/server.HourlyBudget'
+      id:
+        type: string
+      is_private:
+        type: boolean
+      job_type:
+        type: integer
+      last_visited_at:
+        type: string
+      location:
+        $ref: '#/definitions/server.JobLocation'
+      posted_on:
+        type: string
+      privacy_reason:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+      status:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      url:
+        type: string
+    type: object
+  server.JobListResponse:
+    properties:
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/server.JobSummaryDTO'
+        type: array
+      last_updated:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  server.JobLocation:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      timezone:
+        type: string
+    type: object
+  server.JobSummaryClient:
+    properties:
+      country:
+        type: string
+      payment_verified:
+        type: boolean
+    type: object
+  server.JobSummaryDTO:
+    properties:
+      ciphertext:
+        type: string
+      client:
+        $ref: '#/definitions/server.JobSummaryClient'
+      description:
+        type: string
+      duration_label:
+        type: string
+      engagement:
+        type: string
+      fixed_budget:
+        $ref: '#/definitions/server.BudgetInfo'
+      hourly_budget:
+        $ref: '#/definitions/server.HourlyBudget'
+      id:
+        type: string
+      job_type:
+        type: integer
+      last_visited_at:
+        type: string
+      published_on:
+        type: string
+      renewed_on:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      url:
+        type: string
+      weekly_budget:
+        $ref: '#/definitions/server.BudgetInfo'
+    type: object
+  server.JobsResponse:
+    properties:
+      count:
+        type: integer
+      data:
+        items:
+          $ref: '#/definitions/server.JobDTO'
+        type: array
+      last_updated:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+info:
+  contact: {}
+  description: Provides filtered access to normalized Upwork job data stored in Firestore.
+  title: Upwork Job API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Returns a 200 response when the API is up.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+      summary: Health check
+      tags:
+      - health
+  /job-list:
+    get:
+      description: Retrieve Upwork job summaries from the job_list collection with
+        optional filters.
+      parameters:
+      - description: Number of records (1-50)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by client payment verification
+        in: query
+        name: payment_verified
+        type: boolean
+      - description: Filter by client country
+        in: query
+        name: country
+        type: string
+      - description: Comma-separated list of required skill labels
+        in: query
+        name: skills
+        type: string
+      - description: Filter by job type
+        in: query
+        name: job_type
+        type: integer
+      - description: Filter by duration label
+        in: query
+        name: duration
+        type: string
+      - description: Minimum hourly budget
+        in: query
+        name: hourly_min
+        type: number
+      - description: Maximum hourly budget
+        in: query
+        name: hourly_max
+        type: number
+      - description: Minimum fixed budget
+        in: query
+        name: budget_min
+        type: number
+      - description: Maximum fixed budget
+        in: query
+        name: budget_max
+        type: number
+      - description: Case-insensitive search term for title or description
+        in: query
+        name: search
+        type: string
+      - description: Sort mode (published_on_asc, published_on_desc, last_visited_asc,
+          last_visited_desc)
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.JobListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.JobListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/server.JobListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.JobListResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List job summaries
+      tags:
+      - job-list
+  /jobs:
+    get:
+      description: Retrieve normalized job documents with optional filters.
+      parameters:
+      - description: Number of records (1-50)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by payment verification
+        in: query
+        name: payment_verified
+        type: boolean
+      - description: Filter by category slug
+        in: query
+        name: category
+        type: string
+      - description: Filter by category group slug
+        in: query
+        name: category_group
+        type: string
+      - description: Filter by job status
+        in: query
+        name: status
+        type: integer
+      - description: Filter by job type
+        in: query
+        name: job_type
+        type: integer
+      - description: Filter by contractor tier
+        in: query
+        name: contractor_tier
+        type: integer
+      - description: Filter by buyer country
+        in: query
+        name: country
+        type: string
+      - description: Comma-separated required tags
+        in: query
+        name: tags
+        type: string
+      - description: ISO timestamp lower bound
+        in: query
+        name: posted_after
+        type: string
+      - description: ISO timestamp upper bound
+        in: query
+        name: posted_before
+        type: string
+      - description: Minimum fixed budget
+        in: query
+        name: budget_min
+        type: number
+      - description: Maximum fixed budget
+        in: query
+        name: budget_max
+        type: number
+      - description: Sort mode (posted_on_asc, posted_on_desc, last_visited_asc, last_visited_desc)
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: List jobs
+      tags:
+      - jobs
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-KEY
+    type: apiKey
+swagger: "2.0"

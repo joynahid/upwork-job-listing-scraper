@@ -146,6 +146,7 @@ async def process_jobs_simple(
                 "client_industry": job_data.get("client_industry"),
                 "client_local_time": job_data.get("client_local_time"),
                 "posted_date": job_data.get("posted_date"),
+                "posted_on_relative": job_data.get("posted_on_relative") or job.get("posted_on_relative"),
                 "proposals_count": job_data.get("proposals_count"),
                 "duration": job_data.get("duration"),
                 "project_type": job_data.get("project_type"),
