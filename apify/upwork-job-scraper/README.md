@@ -1,100 +1,100 @@
-# 🎯 Live Upwork Job Scraper - Get Fresh Freelance Opportunities Instantly
+# Live Upwork Job Scraper - Get Fresh Upwork Job Listings Instantly
 
-**🚀 The Ultimate Upwork Job Discovery Tool for Freelancers, Agencies & Recruiters**
+**The Ultimate Upwork Job Discovery Tool for Freelancers, Agencies & Recruiters**
 
 Stop manually browsing Upwork for hours! Get **real-time job listings** with complete client data, budgets, competition analysis, and market intelligence - all delivered instantly to your dashboard.
 
 **Perfect for:**
-- 💼 **Freelancers** seeking high-paying projects
-- 🏢 **Agencies** managing multiple clients  
-- 📊 **Market Researchers** analyzing freelance trends
-- 🎯 **Business Owners** finding talent opportunities
+- **Freelancers** seeking high-paying projects
+- **Agencies** managing multiple clients  
+- **Market Researchers** analyzing freelance trends
+- **Business Owners** finding talent opportunities
 
-## 💎 What Makes This Different?
+## What Makes This Different?
 
-### **🔥 Complete Job Intelligence**
-- **💰 Budget & Rate Analysis**: Exact budgets, hourly rates, and payment history
-- **👥 Client Profiles**: Company size, industry, location, and spending patterns  
-- **📈 Competition Insights**: Proposal counts and market demand analysis
-- **⚡ Real-Time Data**: Fresh postings updated every few minutes
-- **🎯 Skills Matching**: Detailed skill requirements and project specifications
+### **Complete Job Intelligence**
+- **Budget & Rate Analysis**: Exact budgets, hourly rates, and payment history
+- **Client Profiles**: Company size, industry, location, and spending patterns  
+- **Competition Insights**: Proposal counts and market demand analysis
+- **Real-Time Data**: Fresh postings updated every few minutes
+- **Skills Matching**: Detailed skill requirements and project specifications
 
-### **🚀 Instant Results**
+### **Instant Results**
 - **No Manual Browsing**: Skip hours of searching through Upwork pages
 - **Bulk Data Export**: Get hundreds of jobs in seconds, not hours
 - **Smart Filtering**: Focus on jobs that match your criteria
 - **Rich Data Format**: CSV, Excel, JSON - use anywhere
 
-## 💰 Incredibly Affordable Pricing
+## Incredibly Affordable Pricing
 
-### **🎉 Pay Only for Results**
+### **Pay Only for Results**
 - **Ultra-Low Cost**: Just **0.001 credits per job** (practically free!)
 - **Example**: 100 jobs = 0.1 credits (~**$0.01**)
 - **Bulk Savings**: 1000 jobs = 1 credit (~**$0.10**)
 - **No Hidden Fees**: Pay only for successfully retrieved jobs
 
-### **💡 Smart Billing**
-- ✅ **Only Successful Jobs Count** - Failed requests are FREE
-- ✅ **No Minimum Charges** - Start with just 1 job
-- ✅ **Transparent Costs** - See exactly what you're paying for
-- ✅ **Volume Discounts** - More jobs = better value
+### **Smart Billing**
+- **Only Successful Jobs Count** - Failed requests are FREE
+- **No Minimum Charges** - Start with just 1 job
+- **Transparent Costs** - See exactly what you're paying for
+- **Volume Discounts** - More jobs = better value
 
-## ⚡ How It Works - Simple 3-Step Process
+## How It Works - Simple 3-Step Process
 
-### **🎯 Step 1: Set Your Preferences**
+### **Step 1: Set Your Preferences**
 - Choose how many jobs you want (1-1000)
 - Click "Start" - that's it!
 
-### **🚀 Step 2: We Do the Heavy Lifting**
+### **Step 2: We Do the Heavy Lifting**
 - Our advanced system scans Upwork in real-time
 - Extracts complete job data including hidden client details
 - Processes everything in seconds, not hours
 
-### **📊 Step 3: Get Your Results**
+### **Step 3: Get Your Results**
 - Download as CSV, Excel, or JSON
 - Import into your CRM or spreadsheet
 - Start applying to the best opportunities immediately!
 
-### **🔄 Always Fresh Data**
+### **Always Fresh Data**
 - **Live Updates**: Jobs refreshed every few minutes
 - **Real-Time Accuracy**: Get the latest postings as they appear
 - **No Stale Data**: Always current market information
 
-## ⚡ Lightning-Fast Performance
+## Lightning-Fast Performance
 
-### **🚀 Get Results in Seconds**
+### **Get Results in Seconds**
 - **Small batches (1-50 jobs)**: **10-30 seconds**
 - **Medium batches (51-200 jobs)**: **30-60 seconds**  
 - **Large batches (201-1000 jobs)**: **1-3 minutes**
 
-### **⏰ Why So Fast?**
+### **Why So Fast?**
 - **Optimized Processing**: Advanced algorithms for maximum speed
 - **Parallel Processing**: Multiple jobs processed simultaneously
 - **Smart Caching**: Reduced wait times for repeated requests
 - **Global Infrastructure**: Fast servers worldwide
 
-## 🎛️ Simple Configuration
+## Simple Configuration
 
-### **📝 Easy Setup**
+### **Easy Setup**
 Just one setting to configure:
 
 | Setting | Options | Default | What It Does |
 |---------|---------|---------|--------------|
 | **Max Jobs** | 1-1000 | 50 | How many job listings to retrieve |
 
-### **💡 Recommended Settings**
-- **🔍 Quick Research**: 50-100 jobs (perfect for daily monitoring)
-- **📊 Market Analysis**: 200-500 jobs (comprehensive market view)  
-- **🎯 Bulk Export**: 500-1000 jobs (maximum data extraction)
+### **Recommended Settings**
+- **Quick Research**: 50-100 jobs (perfect for daily monitoring)
+- **Market Analysis**: 200-500 jobs (comprehensive market view)  
+- **Bulk Export**: 500-1000 jobs (maximum data extraction)
 
-### **⚙️ Configuration Example**
+### **Configuration Example**
 ```json
 {
   "maxJobs": 100
 }
 ```
 
-## 📋 Output Format
+## Output Format
 
 ### **Dataset Schema**
 Each job record contains:
@@ -132,7 +132,7 @@ Each job record contains:
 - **Detailed**: Comprehensive view with all available data
 - **Export**: Download as CSV, Excel, or JSON
 
-## 🛡️ Reliability & Compliance
+## Reliability & Compliance
 
 ### **Anti-Detection Features**
 - Advanced browser fingerprint randomization
@@ -153,7 +153,7 @@ Each job record contains:
 - Ethical data collection practices
 - Transparent usage tracking
 
-## 🚨 Important Notes
+## Important Notes
 
 ### **Rate Limits**
 - Maximum 1000 jobs per run
@@ -170,7 +170,7 @@ Each job record contains:
 - Service availability: 99.9% uptime
 - Automatic failover and retry mechanisms
 
-## 📞 Support
+## Support
 
 ### **Common Issues**
 - **Empty Results**: Try reducing `maxJobs` or running at different times
@@ -182,7 +182,7 @@ Each job record contains:
 - **API Status**: Monitor service health via API endpoint
 - **Feature Requests**: Submit via Apify Console feedback
 
-## 🔄 Version History
+## Version History
 
 - **v0.1.7**: Fixed dataset schema structure, improved UI presentation
 - **v0.1.6**: Enhanced field mapping, added client industry data
@@ -193,4 +193,4 @@ Each job record contains:
 
 ---
 
-**Ready to get started?** Configure your job limit and run the actor to get fresh Upwork job listings in seconds! 🚀
+**Ready to get started?** Configure your job limit and run the actor to get fresh Upwork job listings in seconds!
