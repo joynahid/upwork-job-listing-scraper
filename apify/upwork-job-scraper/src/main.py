@@ -202,7 +202,7 @@ async def main() -> None:
 
         # Extract configuration
         api_key = os.getenv("API_KEY")
-        api_endpoint = os.getenv("API_ENDPOINT", "http://localhost:8080")
+        api_endpoint = os.getenv("API_ENDPOINT", "https://upworkjobscraperapi.nahidhq.com")
         max_jobs = actor_input.get("maxJobs", 50)
         include_raw_data = True  # Always include raw data
         debug_mode = False  # Debug mode disabled for simplicity
@@ -262,7 +262,7 @@ async def main() -> None:
             # Add usage tracking - charge for actual jobs processed using pay-per-event
             try:
                 # Charge for initialization
-                await Actor.charge(event_name='actor-init')
+                await Actor.charge(event_name='api-result')
                 
                 # Charge for each job processed (this is handled automatically by push_data with 'api-result' event_name)
                 Actor.log.info(f"💰 Usage tracked: {processed_count} jobs processed with 'api-result' pay-per-event charging")
