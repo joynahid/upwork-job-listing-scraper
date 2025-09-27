@@ -1,0 +1,42 @@
+name: Deploy to Apify
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apify/upwork-job-scraper/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'apify/upwork-job-scraper/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install Apify CLI
+      run: npm install -g apify-cli
+      
+    - name: Navigate to actor directory
+      run: cd apify/upwork-job-scraper
+      
+    - name: Deploy to Apify
+      env:
+        APIFY_TOKEN: ${{ secrets.APIFY_API_KEY }}
+      run: |
+        cd apify/upwork-job-scraper
+        apify login --token $APIFY_TOKEN
+        apify push
+        
+    - name: Deployment Status
+      run: echo "✅ Successfully deployed to Apify!"

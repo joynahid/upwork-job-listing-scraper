@@ -166,7 +166,6 @@ Each job record contains:
 - Empty results possible during low activity periods
 
 ### **API Dependencies**
-- Requires active API service at `upworkjobscraperapi.nahidhq.com`
 - Service availability: 99.9% uptime
 - Automatic failover and retry mechanisms
 
