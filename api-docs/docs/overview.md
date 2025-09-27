@@ -6,49 +6,51 @@ slug: /
 
 # Welcome to Upwork Jobs API
 
-Transform your business with real-time access to Upwork's job marketplace data. Our premium API service delivers clean, structured job postings with verified client information, helping you identify opportunities, analyze market trends, and grow your business.
+Upwork Jobs API delivers a clean, structured feed of live Upwork demand so content creators, newsletter operators, and idea studios can uncover premium opportunities without manual scraping. Every response includes the context you need to turn briefs into headlines, segments, and monetisable leads.
 
-## Why Choose Our API?
+## Designed for content-led growth
 
-🎯 **Targeted Lead Generation**
-Find high-value clients with verified payment methods and substantial project budgets. Filter by industry, location, and spending history to identify your ideal prospects.
+**Creator-first data**
+- Structured job objects include budgets, buyer history, and skills so you can qualify promising stories at a glance.
+- Ready-to-filter segments make it simple to cluster ideas for newsletters, podcasts, and social threads.
 
-📊 **Market Intelligence**
-Track hiring trends, budget patterns, and skill demand across different industries. Make data-driven decisions about your service offerings and pricing strategy.
+**Integrated workflow support**
+- Native webhooks and field mappings help you plug the API into n8n, Zapier, Make (Integromat), and custom automations.
+- Drop curated jobs into Discord and Telegram channels to keep communities and collaborators aligned.
 
-⚡ **Real-Time Data**
-Get fresh job postings as they're published on Upwork. Stay ahead of the competition with instant access to new opportunities.
+**Reliable signal, zero noise**
+- Spam and duplicates are removed before you ever see them.
+- High-veracity buyer signals (spend, hires, activity) ensure your team only pursues briefs with real intent.
 
-🔒 **Clean, Reliable Data**
-Our advanced processing removes spam, duplicates, and low-quality postings. Every job includes structured data for budgets, client activity, and project requirements.
+## What you receive with every request
 
-## Perfect For
+- Verified client metadata (payment status, lifetime spend, hire counts)
+- Detailed project scope, skills, and category tagging
+- Timestamps for posting and client activity to help you prioritise coverage
+- Budget clarity across fixed and hourly work
+- Deduplicated IDs that stay stable across refreshes
 
-- **Freelancers & Agencies**: Find high-paying clients and track market opportunities
-- **Business Development**: Identify prospects and analyze competitor activity  
-- **Market Research**: Study hiring trends and budget patterns across industries
-- **Lead Generation Tools**: Power your applications with premium job data
-- **Recruitment Platforms**: Source projects and match talent with opportunities
+## Built for your publishing stack
 
-## What You Get
+1. **Capture**: Stream curated jobs into Airtable, Notion, or Sheets via Zapier, n8n, or Make.
+2. **Transform**: Enrich each brief with your heuristics or AI prompts using our consistent schema.
+3. **Publish**: Send finished digests through Discord, Telegram, or your ESP with a fully automated pipeline.
 
-✅ **Verified Client Data**: Payment status, spending history, and hiring activity  
-✅ **Detailed Job Information**: Budgets, skills, timelines, and project descriptions  
-✅ **Advanced Filtering**: Target exactly what you need with 15+ filter options  
-✅ **Real-Time Updates**: Fresh data updated continuously throughout the day  
-✅ **Enterprise Support**: Dedicated assistance and custom integration help  
+## Next steps
 
-## Ready to Get Started?
+- [Follow the quick start guide](/docs/getting-started) to authenticate and pull your first dataset.
+- [Review pricing](/docs/pricing) to align limits with your content cadence.
+- [Explore integrations and support](/docs/support/contact) if you need tailored onboarding.
 
-Join hundreds of businesses already using our API to accelerate their growth. Start with our free trial and see the difference quality data makes.
+Ready to see how much faster you can ship ideas?
 
 import Link from '@docusaurus/Link';
 
 <div style={{display: 'flex', gap: '1rem', marginTop: '2rem'}}>
   <Link className="button button--primary button--lg" to="/docs/getting-started">
-    Start Free Trial
+    Launch quick start
   </Link>
-  <Link className="button button--outline button--lg" to="/docs/pricing">
-    View Pricing Plans
+  <Link className="button button--outline button--lg" to="/docs/api/endpoints">
+    View API schema
   </Link>
 </div>

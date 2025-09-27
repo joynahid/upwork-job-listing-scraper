@@ -7,7 +7,7 @@ title: Rate Limits & Usage
 
 Understand how rate limits work and optimize your API usage for the best performance and cost efficiency.
 
-## 📊 Rate Limits by Plan
+## Plan limits by tier
 
 | Plan | Requests/Minute | Monthly Calls | Burst Limit |
 |------|----------------|---------------|-------------|
@@ -16,7 +16,7 @@ Understand how rate limits work and optimize your API usage for the best perform
 | **Business** | 500 | 100,000 | 1,000 |
 | **Enterprise** | Custom | Unlimited | Custom |
 
-## 🚦 How Rate Limiting Works
+## How the limiter works
 
 ### Request Counting
 - Each API call counts as one request
@@ -46,7 +46,7 @@ X-RateLimit-Burst: 200
 | `X-RateLimit-Reset` | Unix timestamp when limit resets |
 | `X-RateLimit-Burst` | Maximum burst requests allowed |
 
-## ⚡ Rate Limit Exceeded Response
+## Example rate limit response
 
 When you exceed your rate limit, you'll receive:
 
@@ -63,7 +63,7 @@ When you exceed your rate limit, you'll receive:
 
 **Status Code**: `429 Too Many Requests`
 
-## 🛠️ Best Practices
+## Recommended safeguards
 
 ### 1. Implement Exponential Backoff
 
@@ -145,7 +145,7 @@ class RateLimitedClient:
                     return await response.json()
 ```
 
-## 📈 Usage Optimization Strategies
+## Optimising usage
 
 ### 1. Smart Caching
 Cache responses to reduce API calls:
@@ -219,11 +219,11 @@ def process_jobs_in_batches(filters, batch_size=50):
 Use specific filters to reduce data transfer:
 
 ```python
-# ❌ Inefficient - gets all jobs then filters locally
+# Inefficient - gets all jobs then filters locally
 all_jobs = get_jobs({'limit': 50})
 high_budget_jobs = [job for job in all_jobs if job['budget']['fixed_amount'] > 5000]
 
-# ✅ Efficient - filters on server side
+# Efficient - filters on server side
 high_budget_jobs = get_jobs({
     'budget_min': 5000,
     'payment_verified': True,
@@ -231,7 +231,7 @@ high_budget_jobs = get_jobs({
 })
 ```
 
-## 📊 Usage Monitoring
+## Monitoring usage
 
 ### Track Your Consumption
 ```python
@@ -271,7 +271,7 @@ def check_usage_alerts(usage_stats, plan_limit):
         send_alert("Info: 50% of monthly API calls used")
 ```
 
-## 🚀 Scaling Strategies
+## Scaling strategies
 
 ### When to Upgrade Your Plan
 
@@ -320,7 +320,7 @@ class DistributedAPIClient:
                 return await response.json()
 ```
 
-## 🔧 Troubleshooting Rate Limits
+## Troubleshooting rate limits
 
 ### Common Issues
 

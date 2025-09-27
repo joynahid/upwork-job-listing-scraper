@@ -1,104 +1,68 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/Card";
-import { Icon } from "@/components/ui/Icon";
 import { Section } from "@/components/ui/Section";
 import { pricingPlans } from "@/data/landing";
 
 export function PricingSection() {
   return (
-    <Section id="pricing" padding="lg">
-      <div className="text-center mb-16">
-        <h2 className="text-3xl sm:text-4xl font-bold mb-4">Simple, Transparent Pricing</h2>
-        <p className="text-lg text-base-content/70 max-w-2xl mx-auto">
-          Choose the plan that fits your needs. All plans include a 14-day free trial.
+    <Section id="pricing" padding="lg" background="muted">
+      <div className="mx-auto max-w-2xl text-center">
+        <h2 className="text-3xl font-semibold text-base-content sm:text-4xl">
+          Pricing that scales with your pipeline
+        </h2>
+        <p className="mt-4 text-base text-base-content/70 sm:text-lg">
+          Start free, then pick the level of volume and support that suits your team. Cancel
+          anytime.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-        {pricingPlans.map((plan) => (
-          <Card
-            key={plan.name}
-            className={`relative ${
-              plan.highlighted
-                ? "ring-2 ring-primary scale-105 bg-gradient-to-br from-primary/5 to-secondary/5"
-                : ""
-            } transition-all duration-300 hover:scale-[1.02]`}
-          >
-            {plan.highlighted && (
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="badge badge-primary badge-lg">Most Popular</span>
-              </div>
-            )}
+      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {pricingPlans.map((plan) => {
+          const isHighlighted = Boolean(plan.highlighted);
 
-            <CardHeader>
-              <div className="text-center space-y-4">
-                <h3 className="text-2xl font-bold">{plan.name}</h3>
-                <div className="space-y-1">
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    <span className="text-base-content/70">/{plan.period}</span>
-                  </div>
-                  <p className="text-sm text-base-content/70">{plan.description}</p>
+          return (
+            <div
+              key={plan.name}
+              className={`flex h-full flex-col rounded-2xl border p-8 shadow-sm transition-colors ${
+                isHighlighted
+                  ? "border-primary bg-base-100 shadow-md"
+                  : "border-base-300 bg-base-100/80"
+              }`}
+            >
+              <div className="space-y-3 text-left">
+                <h3 className="text-2xl font-semibold text-base-content">{plan.name}</h3>
+                <div className="flex items-baseline gap-2 text-base-content">
+                  <span className="text-4xl font-semibold">{plan.price}</span>
+                  <span className="text-base-content/60">/{plan.period}</span>
                 </div>
+                <p className="text-sm text-base-content/70">{plan.description}</p>
               </div>
-            </CardHeader>
 
-            <CardContent>
-              <ul className="space-y-3">
+              <ul className="mt-8 space-y-3 text-sm text-base-content/80">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <div className="w-5 h-5 rounded-full bg-success/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg
-                        className="w-3 h-3 text-success"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-base-content/80">{feature}</span>
+                  <li key={feature} className="flex gap-3">
+                    <span className="mt-1 inline-block h-1.5 w-1.5 flex-none rounded-full bg-primary"></span>
+                    <span>{feature}</span>
                   </li>
                 ))}
               </ul>
-            </CardContent>
 
-            <CardFooter>
-              <Button
-                variant={plan.highlighted ? "primary" : "outline"}
-                size="lg"
-                className="w-full"
-              >
-                <Link href={plan.ctaLink}>{plan.ctaText}</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+              <div className="mt-auto pt-8">
+                <Button
+                  variant={isHighlighted ? "primary" : "outline"}
+                  size="lg"
+                  className="w-full justify-center"
+                >
+                  <Link href={plan.ctaLink}>{plan.ctaText}</Link>
+                </Button>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* FAQ Link */}
-      <div className="text-center mt-12">
-        <p className="text-base-content/70 mb-4">Have questions about our pricing?</p>
-        <Button variant="ghost">
-          <Link href="#faq">View FAQ →</Link>
-        </Button>
-      </div>
-
-      {/* Money Back Guarantee */}
-      <div className="mt-16 text-center p-6 bg-success/10 rounded-2xl border border-success/20">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Icon name="currency-dollar" className="text-success" size="lg" />
-          <h4 className="text-lg font-semibold">30-Day Money Back Guarantee</h4>
-        </div>
-        <p className="text-sm text-base-content/70">
-          Not satisfied? Get a full refund within 30 days, no questions asked.
-        </p>
+      <div className="mt-10 text-center text-sm text-base-content/60">
+        Need something custom? <Link href="/contact" className="link">Talk to us →</Link>
       </div>
     </Section>
   );

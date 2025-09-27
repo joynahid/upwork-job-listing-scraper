@@ -5,273 +5,127 @@ title: Filtering & Search
 
 # Filtering & Search
 
-Find exactly the jobs you need with our powerful filtering system. Combine multiple filters to target specific opportunities, clients, and market segments.
+Combine filters to isolate the briefs that matter for your creative pipeline. All filters are additive: start broad, then narrow by buyer quality, budget, or niche.
 
-## 🎯 Quick Filter Examples
+## Quick recipes
 
-### High-Value Verified Clients
+### High-intent newsletter briefs
 ```bash
 curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?payment_verified=true&budget_min=3000"
+  "https://api.upworkjobsapi.com/jobs?tags=newsletter,ghostwriting&payment_verified=true&budget_min=1500"
 ```
 
-### Recent Web Development Jobs
+### Recurring content retainers
 ```bash
 curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?category=web-development&posted_after=2024-09-20T00:00:00Z"
+  "https://api.upworkjobsapi.com/jobs?contractor_tier=2&duration_label=ongoing&buyer.total_jobs_with_hires_min=5"
 ```
 
-### Enterprise Clients in Tech
+### Fresh posts in your niche
 ```bash
 curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?tags=react,typescript&buyer.total_spent_min=50000"
+  "https://api.upworkjobsapi.com/jobs?category=marketing-branding-sales&posted_after=2024-10-20T00:00:00Z&sort=posted_on_desc"
 ```
 
-## 📋 Complete Filter Reference
+## Filter reference
 
-### Basic Filters
+### Core parameters
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| `limit` | integer | Number of results (1-50, default 20) | `limit=10` |
-| `payment_verified` | boolean | Client has verified payment method | `payment_verified=true` |
-| `category` | string | Job category slug | `category=web-development` |
-| `category_group` | string | Category group slug | `category_group=development-it` |
-| `country` | string | Client country (2-letter code) | `country=US` |
+| `limit` | integer | Number of results (1-50, default 20). | `limit=15` |
+| `offset` | integer | Pagination offset, multiples of `limit`. | `offset=20` |
+| `payment_verified` | boolean | Require verified payment method. | `payment_verified=true` |
+| `category` | string | Category slug. | `category=writing-translation` |
+| `category_group` | string | Broader category grouping. | `category_group=marketing` |
+| `country` | string | Two-letter country code. | `country=US` |
 
-### Budget Filters
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `budget_min` | number | Minimum fixed budget | `budget_min=1000` |
-| `budget_max` | number | Maximum fixed budget | `budget_max=10000` |
-| `hourly_min` | number | Minimum hourly rate | `hourly_min=50` |
-| `hourly_max` | number | Maximum hourly rate | `hourly_max=150` |
-
-### Job Type & Status
-
-| Parameter | Type | Description | Values |
-|-----------|------|-------------|--------|
-| `job_type` | integer | Contract type | `1`=Hourly, `2`=Fixed Price |
-| `status` | integer | Job status | `1`=Open, `2`=Closed |
-| `contractor_tier` | integer | Experience level | `1`=Entry, `2`=Intermediate, `3`=Expert |
-
-### Time-Based Filters
-
-| Parameter | Type | Description | Format |
-|-----------|------|-------------|--------|
-| `posted_after` | ISO8601 | Jobs posted after this date | `2024-09-20T00:00:00Z` |
-| `posted_before` | ISO8601 | Jobs posted before this date | `2024-09-27T23:59:59Z` |
-
-### Skills & Tags
+### Budget controls
 
 | Parameter | Type | Description | Example |
 |-----------|------|-------------|---------|
-| `tags` | string | Comma-separated required skills | `tags=react,typescript,aws` |
-| `skills` | string | Alternative to tags | `skills=python,django` |
+| `budget_min` | number | Minimum fixed budget in currency units. | `budget_min=2000` |
+| `budget_max` | number | Maximum fixed budget. | `budget_max=10000` |
+| `hourly_min` | number | Minimum hourly rate. | `hourly_min=75` |
+| `hourly_max` | number | Maximum hourly rate. | `hourly_max=150` |
 
-### Sorting Options
+### Job structure
 
-| Parameter | Values | Description |
-|-----------|--------|-------------|
-| `sort` | `posted_on_asc` | Oldest jobs first |
-| `sort` | `posted_on_desc` | Newest jobs first (default) |
-| `sort` | `last_visited_asc` | Least recently active clients |
-| `sort` | `last_visited_desc` | Most recently active clients |
-| `sort` | `budget_asc` | Lowest budget first |
-| `sort` | `budget_desc` | Highest budget first |
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `job_type` | integer | `1` hourly, `2` fixed price. | `job_type=2` |
+| `status` | integer | `1` open, `2` closed. | `status=1` |
+| `contractor_tier` | integer | `1` entry, `2` intermediate, `3` expert. | `contractor_tier=3` |
+| `duration_label` | string | Free-text duration label. | `duration_label=ongoing` |
+| `engagement` | string | Engagement type such as `part-time`. | `engagement=part-time` |
 
-## 🔍 Advanced Filtering Strategies
+### Time windows
 
-### Target High-Spending Clients
-Find clients who regularly hire and spend significant amounts:
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `posted_after` | ISO 8601 | Jobs posted after timestamp. | `posted_after=2024-10-22T00:00:00Z` |
+| `posted_before` | ISO 8601 | Jobs posted before timestamp. | `posted_before=2024-10-24T23:59:59Z` |
+| `last_visited_after` | ISO 8601 | Client activity after timestamp. | `last_visited_after=2024-10-23T00:00:00Z` |
 
+### Skills and tags
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `tags` | comma-separated string | Match any of the provided tags. | `tags=podcast,newsletter` |
+| `skills` | comma-separated string | Alias for `tags`. | `skills=seo,copywriting` |
+
+### Buyer intelligence
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `buyer.total_spent_min` | number | Minimum historical spend (USD). | `buyer.total_spent_min=20000` |
+| `buyer.total_assignments_min` | number | Minimum completed jobs. | `buyer.total_assignments_min=10` |
+| `buyer.total_jobs_with_hires_min` | number | Minimum hires recorded. | `buyer.total_jobs_with_hires_min=5` |
+
+### Sorting
+
+| Value | Description |
+|-------|-------------|
+| `posted_on_asc` | Oldest jobs first. |
+| `posted_on_desc` | Newest jobs first (default). |
+| `last_visited_asc` | Least recently active clients first. |
+| `last_visited_desc` | Most recently active clients first. |
+| `budget_asc` | Lower budgets first. |
+| `budget_desc` | Higher budgets first. |
+
+## Advanced strategies
+
+### Prioritise high-spend buyers
 ```bash
-# Clients who spent $25k+ and hired 5+ freelancers
 curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?buyer.total_spent_min=25000&buyer.total_jobs_with_hires_min=5"
+  "https://api.upworkjobsapi.com/jobs?buyer.total_spent_min=50000&buyer.total_jobs_with_hires_min=8&payment_verified=true"
 ```
 
-### Find Urgent Projects
-Look for jobs with high activity and recent posting:
-
+### Surface emerging topics
 ```bash
-# Posted in last 24 hours with multiple applicants
 curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?posted_after=2024-09-26T00:00:00Z&client_activity.total_applicants_min=10"
+  "https://api.upworkjobsapi.com/jobs?tags=ai,founder stories&posted_after=2024-10-21T00:00:00Z"
 ```
 
-### Niche Technology Stacks
-Target specific technology combinations:
-
+### Build community digests
 ```bash
-# React + Node.js + AWS projects
 curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?tags=react,nodejs,aws&job_type=2"
+  "https://api.upworkjobsapi.com/jobs?limit=25&sort=posted_on_desc&category=marketing-branding-sales"
 ```
 
-### Geographic Targeting
-Focus on specific regions or time zones:
+## Optimisation tips
 
-```bash
-# US clients in PST timezone
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?country=US&location.timezone=America/Los_Angeles"
-```
+- Use `limit` judiciously; multiple smaller calls are easier to buffer in automation tools.
+- Cache results between runs to stay well within rate limits.
+- Log both the request URL and `last_updated` timestamp to trace batches.
+- Combine filters gradually; test each new parameter before adding another.
 
-## 🎨 Filter Combinations
+## Troubleshooting
 
-### Freelancer Lead Generation
-```bash
-# High-value, verified clients in your niche
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?payment_verified=true&budget_min=2000&category=web-development&contractor_tier=2"
-```
+| Issue | Likely cause | Fix |
+|-------|--------------|-----|
+| Empty results | Filters too specific | Remove filters one at a time to identify the blocker. |
+| 400 error | Parameter typo or invalid value | Confirm parameter names and data types. |
+| Slow response | Large limits with broad filters | Narrow your query or page through results. |
 
-### Agency Business Development
-```bash
-# Large projects from established clients
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?budget_min=10000&buyer.total_spent_min=50000&job_type=2"
-```
-
-### Market Research
-```bash
-# Recent trends in AI/ML hiring
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?tags=machine-learning,artificial-intelligence&posted_after=2024-09-01T00:00:00Z&sort=posted_on_desc"
-```
-
-### Competitive Analysis
-```bash
-# Monitor specific skill combinations
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?tags=python,tensorflow&budget_min=5000&sort=budget_desc"
-```
-
-## 📊 Filter Performance Tips
-
-### Optimize Your Queries
-
-**✅ Good Practices:**
-- Use specific categories instead of broad searches
-- Combine budget and verification filters for quality leads
-- Set reasonable limits to avoid unnecessary data transfer
-- Cache results for repeated queries
-
-**❌ Avoid:**
-- Overly broad searches without filters
-- Requesting maximum limits unnecessarily
-- Frequent identical queries (use caching)
-- Complex regex patterns in text searches
-
-### Rate Limit Management
-- More specific filters = faster responses
-- Cached results don't count against rate limits
-- Batch similar queries when possible
-
-## 🔧 Implementation Examples
-
-### Python with Multiple Filters
-```python
-import requests
-
-params = {
-    'payment_verified': True,
-    'budget_min': 3000,
-    'category': 'web-development',
-    'tags': 'react,typescript',
-    'country': 'US',
-    'limit': 20,
-    'sort': 'posted_on_desc'
-}
-
-response = requests.get(
-    'https://api.upworkjobsapi.com/jobs',
-    headers={'X-API-KEY': 'your-key'},
-    params=params
-)
-```
-
-### JavaScript Dynamic Filtering
-```javascript
-const buildQuery = (filters) => {
-  const params = new URLSearchParams();
-  
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== null && value !== undefined) {
-      params.append(key, value);
-    }
-  });
-  
-  return params.toString();
-};
-
-const filters = {
-  payment_verified: true,
-  budget_min: 2000,
-  category: 'design-creative',
-  limit: 15
-};
-
-const queryString = buildQuery(filters);
-const url = `https://api.upworkjobsapi.com/jobs?${queryString}`;
-```
-
-### PHP Filter Builder
-```php
-class UpworkJobFilter {
-    private $filters = [];
-    
-    public function paymentVerified($verified = true) {
-        $this->filters['payment_verified'] = $verified;
-        return $this;
-    }
-    
-    public function budgetRange($min, $max = null) {
-        $this->filters['budget_min'] = $min;
-        if ($max) $this->filters['budget_max'] = $max;
-        return $this;
-    }
-    
-    public function category($category) {
-        $this->filters['category'] = $category;
-        return $this;
-    }
-    
-    public function build() {
-        return http_build_query($this->filters);
-    }
-}
-
-// Usage
-$filter = new UpworkJobFilter();
-$query = $filter->paymentVerified()
-               ->budgetRange(1000, 5000)
-               ->category('web-development')
-               ->build();
-```
-
-## 🆘 Common Filter Issues
-
-### Invalid Parameters
-- **Problem**: Getting 400 errors with filter combinations
-- **Solution**: Check parameter names and value formats
-- **Example**: Use `payment_verified=true`, not `payment_verified=1`
-
-### No Results
-- **Problem**: Filters too restrictive, returning empty results
-- **Solution**: Gradually remove filters to find the issue
-- **Tip**: Start broad, then narrow down
-
-### Slow Responses
-- **Problem**: Complex queries taking too long
-- **Solution**: Use more specific filters and lower limits
-- **Optimization**: Cache frequently used filter combinations
-
----
-
-**Need help optimizing your filters?**
-
-[Contact Support](mailto:support@upworkjobsapi.com)
-[View API Examples](/docs/api/endpoints)
+Need a filter that is not listed? Contact [support@upworkjobsapi.com](mailto:support@upworkjobsapi.com) and share an example brief; we can suggest field combinations or roadmap the enhancement.

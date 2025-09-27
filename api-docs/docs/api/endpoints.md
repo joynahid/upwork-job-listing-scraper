@@ -5,250 +5,178 @@ title: API Endpoints
 
 # API Endpoints
 
-Our API provides clean, structured access to Upwork job data through simple REST endpoints. All responses are in JSON format with consistent structure.
+Upwork Jobs API exposes concise REST endpoints with predictable JSON payloads. All responses share the same envelope so you can map fields into automations without custom parsing.
 
-## 🏥 Health Check
+## Health check
 
 ### `GET /health`
 
-Check if the API service is running and responsive.
+Verify connectivity, authentication, and uptime. Ideal for scheduled monitors or preflight checks in automation platforms.
 
-**Request:**
+**Request**
 ```http
 GET /health HTTP/1.1
 Host: api.upworkjobsapi.com
 X-API-KEY: your-api-key
 ```
 
-**Response:**
+**Response**
 ```json
 {
   "success": true,
   "message": "API is healthy",
-  "last_updated": "2024-09-27T12:34:56Z",
   "data": [],
-  "count": 0
+  "count": 0,
+  "last_updated": "2024-10-24T12:00:32Z"
 }
 ```
 
-**Use Cases:**
-- Monitor API availability
-- Health checks in your applications
-- Validate API key functionality
-
----
-
-## 💼 Jobs Endpoint
+## Jobs endpoint
 
 ### `GET /jobs`
 
-Retrieve Upwork job postings with advanced filtering and search capabilities.
+Pull curated Upwork job postings enriched with buyer intelligence. Combine query parameters to match your beat, niche, or audience needs.
 
-**Base URL:** `https://api.upworkjobsapi.com/jobs`
+**Base URL**: `https://api.upworkjobsapi.com/jobs`
 
-**Request:**
+**Request example**
 ```http
-GET /jobs?limit=10&payment_verified=true&budget_min=1000 HTTP/1.1
+GET /jobs?limit=10&payment_verified=true&tags=newsletter,saas HTTP/1.1
 Host: api.upworkjobsapi.com
 X-API-KEY: your-api-key
 ```
 
-**Response:**
+**Response example**
 ```json
 {
   "success": true,
   "data": [
     {
-      "id": "upwork-123456",
-      "title": "Senior React Developer for SaaS Platform",
-      "description": "We're looking for an experienced React developer...",
+      "id": "upwork-872341",
+      "title": "Launch a weekly AI founder newsletter",
+      "description": "We need a researcher-writer to source stories and trends...",
       "job_type": 2,
       "status": 1,
       "contractor_tier": 2,
-      "posted_on": "2024-09-27T10:30:00Z",
+      "posted_on": "2024-10-24T08:12:43Z",
       "category": {
-        "name": "Web Development",
-        "slug": "web-development",
-        "group": "Development & IT",
-        "group_slug": "development-it"
+        "name": "Writing & Translation",
+        "slug": "writing-translation",
+        "group": "Sales & Marketing",
+        "group_slug": "sales-marketing"
       },
       "budget": {
-        "fixed_amount": 5000,
+        "fixed_amount": 2500,
         "currency": "USD"
       },
+      "hourly_budget": null,
       "buyer": {
         "payment_verified": true,
         "country": "US",
-        "city": "San Francisco",
-        "timezone": "America/Los_Angeles",
-        "total_spent": 125000,
-        "total_assignments": 25,
-        "total_jobs_with_hires": 18
+        "city": "Austin",
+        "timezone": "America/Chicago",
+        "total_spent": 84500,
+        "total_assignments": 28,
+        "total_jobs_with_hires": 21
       },
-      "tags": ["react", "typescript", "saas"],
+      "skills": ["newsletter", "ai research", "marketing"],
+      "tags": ["founder stories", "growth marketing"],
+      "client_activity": {
+        "total_applicants": 12,
+        "total_hired": 4,
+        "total_invited_to_interview": 7,
+        "unanswered_invites": 1,
+        "invitations_sent": 9,
+        "last_buyer_activity": "2024-10-24T07:55:12Z"
+      },
       "url": "https://www.upwork.com/jobs/~01abc123",
-      "last_visited_at": "2024-09-27T11:15:00Z",
+      "last_visited_at": "2024-10-24T09:05:03Z",
       "duration_label": "3 to 6 months",
       "engagement": "part-time",
-      "skills": ["React", "TypeScript", "Node.js", "AWS"],
-      "hourly_budget": null,
-      "client_activity": {
-        "total_applicants": 15,
-        "total_hired": 2,
-        "total_invited_to_interview": 5,
-        "unanswered_invites": 1,
-        "invitations_sent": 8,
-        "last_buyer_activity": "2024-09-27T09:45:00Z"
-      },
-      "location": {
-        "country": "US",
-        "city": "San Francisco",
-        "timezone": "America/Los_Angeles"
-      },
       "is_private": false,
       "privacy_reason": ""
     }
   ],
   "count": 1,
-  "last_updated": "2024-09-27T12:35:42Z"
+  "last_updated": "2024-10-24T08:14:03Z"
 }
 ```
 
-## 📊 Response Fields Explained
+## Response schema
 
-### Job Information
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Unique job identifier |
-| `title` | string | Job posting title |
-| `description` | string | Full job description |
-| `url` | string | Direct link to Upwork job posting |
-| `posted_on` | string | When the job was posted (ISO 8601) |
-| `last_visited_at` | string | Last client activity timestamp |
+| `success` | boolean | Indicates whether the request succeeded. |
+| `data` | array | Collection of job objects. Empty array if no matches. |
+| `count` | integer | Number of items in `data`. |
+| `last_updated` | string (ISO 8601) | Timestamp when the response was generated. |
+| `message` | string | Present on error responses to explain the failure. |
 
-### Budget & Pricing
+### Job object
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `budget.fixed_amount` | number | Fixed project budget (if applicable) |
-| `budget.currency` | string | Currency code (USD, EUR, etc.) |
-| `hourly_budget.min` | number | Minimum hourly rate |
-| `hourly_budget.max` | number | Maximum hourly rate |
+| `id` | string | Stable identifier for deduplication and caching. |
+| `title` | string | Project headline provided by the client. |
+| `description` | string | Full brief containing requirements and scope. |
+| `url` | string | Direct Upwork link for manual review. |
+| `posted_on` | string | Publish timestamp (ISO 8601). |
+| `last_visited_at` | string | Most recent client activity timestamp. |
+| `job_type` | integer | `1` for hourly, `2` for fixed price contracts. |
+| `status` | integer | `1` open, `2` closed. |
+| `contractor_tier` | integer | Experience level: `1` entry, `2` intermediate, `3` expert. |
+| `category` | object | Includes `name`, `slug`, `group`, and `group_slug`. |
+| `budget` | object | `fixed_amount` (number) and `currency` (string) when available. |
+| `hourly_budget` | object/null | Contains `min` and `max` hourly rates when hourly. |
+| `buyer` | object | Client profile with verification status and spend history. |
+| `skills` | array | Primary skills required. |
+| `tags` | array | Additional keywords and themes. |
+| `client_activity` | object | Application, invitation, and hire counts. |
+| `duration_label` | string | Human-readable duration estimate. |
+| `engagement` | string | Typical schedule (full-time, part-time, etc.). |
+| `is_private` | boolean | Indicates if listing details are restricted. |
+| `privacy_reason` | string | Reason when `is_private` is true. |
 
-### Client Intelligence
-| Field | Type | Description |
-|-------|------|-------------|
-| `buyer.payment_verified` | boolean | Client has verified payment method |
-| `buyer.total_spent` | number | Total amount spent on Upwork |
-| `buyer.total_assignments` | number | Number of completed projects |
-| `buyer.total_jobs_with_hires` | number | Jobs where client hired someone |
-| `buyer.country` | string | Client's country |
+## Error handling
 
-### Project Details
-| Field | Type | Description |
-|-------|------|-------------|
-| `job_type` | number | 1=Hourly, 2=Fixed Price |
-| `contractor_tier` | number | 1=Entry, 2=Intermediate, 3=Expert |
-| `duration_label` | string | Expected project duration |
-| `engagement` | string | full-time, part-time, etc. |
-| `skills` | array | Required skills and technologies |
+Error responses retain the same envelope so your automations can branch on `success` or HTTP status.
 
-### Market Activity
-| Field | Type | Description |
-|-------|------|-------------|
-| `client_activity.total_applicants` | number | Number of freelancers who applied |
-| `client_activity.total_hired` | number | Number of freelancers hired |
-| `client_activity.invitations_sent` | number | Invitations sent by client |
-| `client_activity.last_buyer_activity` | string | Last time client was active |
-
-## 🚨 Error Responses
-
-### Bad Request (400)
 ```json
 {
   "success": false,
   "message": "Invalid budget_min parameter",
   "data": [],
   "count": 0,
-  "last_updated": "2024-09-27T12:00:00Z"
+  "last_updated": "2024-10-24T12:00:00Z"
 }
 ```
 
-### Unauthorized (401)
-```json
-{
-  "success": false,
-  "message": "Invalid or missing X-API-KEY header",
-  "data": [],
-  "count": 0,
-  "last_updated": "2024-09-27T12:00:00Z"
-}
-```
+Common status codes:
 
-### Rate Limited (429)
-```json
-{
-  "success": false,
-  "message": "Rate limit exceeded. Upgrade your plan for higher limits.",
-  "data": [],
-  "count": 0,
-  "last_updated": "2024-09-27T12:00:00Z"
-}
-```
+| Status | Meaning | Suggested action |
+|--------|---------|------------------|
+| 400 | Validation error | Review query parameters and value formats. |
+| 401 | Authentication failure | Confirm the `X-API-KEY` header and rotate if compromised. |
+| 404 | Endpoint not found | Verify the path. |
+| 429 | Rate limit exceeded | Implement retries with exponential backoff or upgrade your plan. |
+| 500 | Internal server error | Retry after a short delay or contact support. |
 
-### Server Error (500)
-```json
-{
-  "success": false,
-  "message": "Internal server error. Please try again later.",
-  "data": [],
-  "count": 0,
-  "last_updated": "2024-09-27T12:00:00Z"
-}
-```
+## Integration patterns
 
-## 🔄 Response Consistency
+| Scenario | Recommended flow |
+|----------|------------------|
+| n8n | HTTP node -> Set/Function node for scoring -> Notion/Airtable/Slack modules. |
+| Zapier | Schedule trigger -> Webhooks (GET) -> Formatter -> ESP/Discord modules. |
+| Make | HTTP module -> Array aggregator -> Telegram/Google Sheets/Discord modules. |
+| Direct webhooks | Use `/jobs` with `webhook=true` (Professional+) to receive pushed updates without polling. |
+| Discord/Telegram | Connect via Zapier, Make, or direct webhooks and format summaries into bullet lists or embeds. |
 
-All API responses follow the same structure:
+## Testing checklist
 
-- `success`: Boolean indicating if the request was successful
-- `data`: Array of results (empty array if no results)
-- `count`: Number of items in the data array
-- `last_updated`: Timestamp when the response was generated
-- `message`: Human-readable status message (present on errors)
+1. Call `/health` to confirm connectivity and authentication.
+2. Request `/jobs?limit=1` to verify schema mapping.
+3. Add filters incrementally and log both HTTP status and payload size.
+4. Store `last_updated` to reconcile batching jobs in downstream systems.
+5. Monitor rate limit headers and configure retries at the platform level.
 
-## 📈 Performance Tips
-
-### Optimize Your Requests
-- **Use appropriate limits**: Don't request more data than you need
-- **Cache responses**: Store results to reduce API calls
-- **Filter effectively**: Use specific filters to get targeted results
-- **Batch processing**: Process multiple jobs in single requests
-
-### Rate Limit Management
-- **Monitor usage**: Track your API call consumption
-- **Implement backoff**: Handle rate limits gracefully
-- **Upgrade when needed**: Higher plans have better rate limits
-
-## 🛠️ Testing Your Integration
-
-### Using cURL
-```bash
-# Test health endpoint
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/health"
-
-# Test jobs endpoint
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?limit=1"
-```
-
-### Postman Collection
-We provide a complete Postman collection with example requests:
-[Download Postman Collection](mailto:support@upworkjobsapi.com?subject=Postman%20Collection%20Request)
-
----
-
-**Need help with integration?**
-
-[Contact Technical Support](mailto:support@upworkjobsapi.com)
-[View Filtering Guide](/docs/api/filtering)
+Need something custom? Email [support@upworkjobsapi.com](mailto:support@upworkjobsapi.com) and share your workflow diagram so we can help validate schema mapping or provide tailored snippets.

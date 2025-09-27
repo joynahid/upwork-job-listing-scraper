@@ -1,58 +1,179 @@
 {
     "actorSpecification": 1,
     "fields": {
-        "title": "Upwork Job Listings",
+        "title": "Upwork Job Listings (Go API Format)",
         "type": "object",
         "schemaVersion": 1,
         "properties": {
-        "job_id": {
+        "id": {
             "title": "Job ID",
             "type": "string",
             "description": "Unique identifier for the job posting",
-            "example": "Virtual-Assistant-Needed-for-Research-Outreach-and-Organization_~021971791858643452240"
+            "example": "1971966031232790280"
         },
         "title": {
             "title": "Job Title",
             "type": "string",
             "description": "The title of the job posting",
-            "example": "Virtual Assistant Needed for Research, Outreach, and Organization"
+            "example": "Customer Service / Operations Manager"
         },
         "description": {
             "title": "Job Description", 
             "type": "string",
             "description": "Full description of the job requirements and details",
-            "example": "We are seeking an experienced virtual assistant to help with research, outreach, and organization tasks..."
+            "example": "We're seeking someone who communicates with empathy, patience, speed, and precision..."
+        },
+        "job_type": {
+            "title": "Job Type",
+            "type": "string", 
+            "description": "Type of job posting (hourly, fixed-price)",
+            "example": "fixed-price"
+        },
+        "status": {
+            "title": "Job Status",
+            "type": "string",
+            "description": "Current status of the job (open, closed)",
+            "example": "open"
+        },
+        "contractor_tier": {
+            "title": "Contractor Tier",
+            "type": "string",
+            "description": "Required experience level (entry, intermediate, expert)",
+            "example": "expert"
+        },
+        "posted_on": {
+            "title": "Posted On",
+            "type": "string",
+            "description": "ISO timestamp when the job was posted",
+            "example": "2025-09-27T15:51:54Z",
+            "format": "date-time"
+        },
+        "category": {
+            "title": "Job Category",
+            "type": ["object", "null"],
+            "description": "Category information for the job",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Category name",
+                    "example": "Customer Service & Tech Support"
+                },
+                "slug": {
+                    "type": "string", 
+                    "description": "Category slug",
+                    "example": "customer-service-tech-support"
+                },
+                "group": {
+                    "type": "string",
+                    "description": "Category group name",
+                    "example": "Customer Service"
+                },
+                "group_slug": {
+                    "type": "string",
+                    "description": "Category group slug", 
+                    "example": "customer-service"
+                }
+            }
+        },
+        "budget": {
+            "title": "Budget Information",
+            "type": ["object", "null"],
+            "description": "Fixed budget details",
+            "properties": {
+                "fixed_amount": {
+                    "type": ["number", "null"],
+                    "description": "Fixed budget amount",
+                    "example": 1000.0
+                },
+                "currency": {
+                    "type": "string",
+                    "description": "Currency code",
+                    "example": "USD"
+                }
+            }
+        },
+        "buyer": {
+            "title": "Buyer Information",
+            "type": ["object", "null"],
+            "description": "Client/buyer details",
+            "properties": {
+                "payment_verified": {
+                    "type": ["boolean", "null"],
+                    "description": "Whether client payment is verified",
+                    "example": true
+                },
+                "country": {
+                    "type": "string",
+                    "description": "Client country",
+                    "example": "UNITED STATES"
+                },
+                "city": {
+                    "type": "string",
+                    "description": "Client city",
+                    "example": "Austin"
+                },
+                "timezone": {
+                    "type": "string",
+                    "description": "Client timezone",
+                    "example": "America/Chicago (UTC-05:00)"
+                },
+                "total_spent": {
+                    "type": ["number", "null"],
+                    "description": "Total amount spent by client",
+                    "example": 32812.32
+                },
+                "total_assignments": {
+                    "type": ["integer", "null"],
+                    "description": "Total assignments by client",
+                    "example": 21
+                },
+                "total_jobs_with_hires": {
+                    "type": ["integer", "null"],
+                    "description": "Total jobs with hires by client",
+                    "example": 17
+                }
+            }
+        },
+        "tags": {
+            "title": "Job Tags",
+            "type": "array",
+            "description": "List of tags associated with the job",
+            "items": {
+                "type": "string"
+            },
+            "example": ["jsi_contractToHire", "contractToHireSet", "searchable"]
         },
         "url": {
             "title": "Job URL",
             "type": "string",
             "description": "Direct link to the job posting on Upwork",
-            "example": "https://www.upwork.com/jobs/Virtual-Assistant-Needed-for-Research-Outreach-and-Organization_~021971791858643452240/",
+            "example": "https://www.upwork.com/freelance-jobs/apply/Customer-Service-Operations-Manager_~021971966031232790280/",
             "format": "uri"
         },
-        "hourly_rate": {
-            "title": "Hourly Rate",
-            "type": ["string", "null"],
-            "description": "Hourly rate range for the job",
-            "example": "$15.00 - $30.00/hr"
+        "last_visited_at": {
+            "title": "Last Visited At",
+            "type": "string",
+            "description": "When this job was last visited by the scraper",
+            "example": "2025-09-28T00:54:39Z",
+            "format": "date-time"
         },
-        "budget": {
-            "title": "Project Budget",
-            "type": ["string", "null"], 
-            "description": "Fixed price budget for the project",
-            "example": "$100.00"
+        "posted_on_relative": {
+            "title": "Posted On Relative",
+            "type": "string",
+            "description": "Human-readable relative time when job was posted",
+            "example": "7 hours ago"
         },
-        "experience_level": {
-            "title": "Experience Level",
-            "type": ["string", "null"],
-            "description": "Required experience level for the job",
-            "example": "Intermediate"
+        "duration_label": {
+            "title": "Duration Label",
+            "type": "string",
+            "description": "Expected project duration",
+            "example": "More than 6 months"
         },
-        "job_type": {
-            "title": "Job Type",
-            "type": ["string", "null"], 
-            "description": "Type of job posting",
-            "example": "Fixed-price"
+        "engagement": {
+            "title": "Engagement Type",
+            "type": "string",
+            "description": "Type of engagement expected",
+            "example": "Less than 30 hrs/week"
         },
         "skills": {
             "title": "Required Skills",
@@ -61,141 +182,110 @@
             "items": {
                 "type": "string"
             },
-            "example": ["Web Development", "Web Design", "PHP"]
+            "example": ["Customer Service", "Operations Management"]
         },
-        "client_location": {
-            "title": "Client Location",
-            "type": ["string", "null"],
-            "description": "Geographic location of the client",
-            "example": "AUS"
+        "hourly_budget": {
+            "title": "Hourly Budget",
+            "type": ["object", "null"],
+            "description": "Hourly budget information",
+            "properties": {
+                "min": {
+                    "type": ["number", "null"],
+                    "description": "Minimum hourly rate",
+                    "example": 15.0
+                },
+                "max": {
+                    "type": ["number", "null"],
+                    "description": "Maximum hourly rate",
+                    "example": 30.0
+                },
+                "currency": {
+                    "type": "string",
+                    "description": "Currency code",
+                    "example": "USD"
+                }
+            }
         },
-        "client_company_size": {
-            "title": "Client Company Size",
-            "type": ["string", "null"],
-            "description": "Size of the client's company",
-            "example": "Individual client"
+        "client_activity": {
+            "title": "Client Activity",
+            "type": ["object", "null"],
+            "description": "Client activity metrics for this job",
+            "properties": {
+                "total_applicants": {
+                    "type": ["integer", "null"],
+                    "description": "Total number of applicants",
+                    "example": 1
+                },
+                "total_hired": {
+                    "type": ["integer", "null"],
+                    "description": "Total number hired",
+                    "example": 0
+                },
+                "total_invited_to_interview": {
+                    "type": ["integer", "null"],
+                    "description": "Total invited to interview",
+                    "example": 0
+                },
+                "unanswered_invites": {
+                    "type": ["integer", "null"],
+                    "description": "Number of unanswered invites",
+                    "example": 0
+                },
+                "invitations_sent": {
+                    "type": ["integer", "null"],
+                    "description": "Number of invitations sent",
+                    "example": 0
+                },
+                "last_buyer_activity": {
+                    "type": "string",
+                    "description": "Last buyer activity timestamp",
+                    "example": "2025-09-27T15:58:47.031Z"
+                }
+            }
         },
-        "client_industry": {
-            "title": "Client Industry",
-            "type": ["string", "null"],
-            "description": "Industry sector of the client",
-            "example": "Tech & IT"
+        "location": {
+            "title": "Job Location",
+            "type": ["object", "null"],
+            "description": "Job location information",
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "description": "Job country",
+                    "example": "United States"
+                },
+                "city": {
+                    "type": "string",
+                    "description": "Job city",
+                    "example": "Austin"
+                },
+                "timezone": {
+                    "type": "string",
+                    "description": "Job timezone",
+                    "example": "America/Chicago (UTC-05:00)"
+                }
+            }
         },
-        "client_local_time": {
-            "title": "Client Local Time",
-            "type": ["string", "null"],
-            "description": "Client's local time when job was scraped",
-            "example": "4:17 PM"
+        "is_private": {
+            "title": "Is Private",
+            "type": "boolean",
+            "description": "Whether the job is private/restricted",
+            "example": false
         },
-        "posted_date": {
-            "title": "Posted Date",
-            "type": ["string", "null"],
-            "description": "When the job was posted (relative time)",
-            "example": "Posted 36 seconds ago"
-        },
-        "proposals_count": {
-            "title": "Number of Proposals",
-            "type": ["string", "null"],
-            "description": "Number of proposals submitted for this job",
-            "example": "Less than 5"
-        },
-        "duration": {
-            "title": "Project Duration",
-            "type": ["string", "null"],
-            "description": "Expected duration of the project",
-            "example": "1-3 months"
-        },
-        "project_type": {
-            "title": "Project Type",
-            "type": ["string", "null"],
-            "description": "Type of project engagement",
-            "example": "One-time project"
-        },
-        "work_hours": {
-            "title": "Work Hours",
-            "type": ["string", "null"],
-            "description": "Expected weekly work hours",
-            "example": "More than 30 hrs/week"
-        },
-        "member_since": {
-            "title": "Client Member Since",
-            "type": ["string", "null"],
-            "description": "When the client joined Upwork",
-            "example": "Jun 19, 2025"
-        },
-        "total_spent": {
-            "title": "Total Client Spending",
-            "type": ["string", "null"],
-            "description": "Total amount the client has spent on Upwork",
-            "example": "$250"
-        },
-        "total_hires": {
-            "title": "Total Hires",
-            "type": ["string", "null"],
-            "description": "Total number of freelancers hired by the client",
-            "example": "6"
-        },
-        "total_active": {
-            "title": "Total Active Jobs",
-            "type": ["string", "null"],
-            "description": "Number of active jobs the client has",
-            "example": "2"
-        },
-        "total_client_hours": {
-            "title": "Total Client Hours",
-            "type": ["string", "null"],
-            "description": "Total hours the client has hired for",
-            "example": "50"
-        },
-        "interviewing": {
-            "title": "Interviewing Count",
-            "type": ["string", "null"],
-            "description": "Number of freelancers currently being interviewed",
-            "example": "0"
-        },
-        "invites_sent": {
-            "title": "Invites Sent",
-            "type": ["string", "null"],
-            "description": "Number of invites sent by the client",
-            "example": "0"
-        },
-        "unanswered_invites": {
-            "title": "Unanswered Invites",
-            "type": ["string", "null"],
-            "description": "Number of unanswered invites",
-            "example": "0"
-        },
-        "hires": {
-            "title": "Current Hires",
-            "type": ["string", "null"],
-            "description": "Number of current hires for this job",
-            "example": null
-        },
-        "last_viewed_by_client": {
-            "title": "Last Viewed by Client",
-            "type": ["string", "null"],
-            "description": "When the client last viewed this job",
-            "example": null
-        },
-        "last_visited_at": {
-            "title": "Last Visited",
+        "privacy_reason": {
+            "title": "Privacy Reason",
             "type": "string",
-            "description": "When this job was last checked by the scraper",
-            "format": "date-time"
+            "description": "Reason why job is private (if applicable)",
+            "example": "This job is private or restricted (403)."
         },
         "scraped_at": {
             "title": "Scraped At",
-            "type": "string", 
-            "description": "When this data was extracted",
-            "format": "date-time"
-        },
-        "raw_data": {
-            "title": "Raw Data",
-            "type": "object",
-            "description": "Complete raw data from the API response (when include_raw_data is enabled)"
+            "type": "string",
+            "description": "When this data was extracted by the Apify actor",
+            "format": "date-time",
+            "example": "2025-09-27T23:00:05Z"
         }
     },
-    "required": ["job_id", "title", "scraped_at"]
+    "required": ["id", "title", "scraped_at"]
     },
     "views": {
         "overview": {
@@ -203,13 +293,12 @@
             "transformation": {
                 "fields": [
                     "title",
-                    "experience_level", 
+                    "contractor_tier", 
                     "job_type",
-                    "client_location",
-                    "proposals_count",
-                    "posted_date",
+                    "status",
+                    "posted_on_relative",
                     "budget",
-                    "hourly_rate"
+                    "hourly_budget"
                 ]
             },
             "display": {
@@ -219,7 +308,7 @@
                         "label": "Job Title",
                         "format": "text"
                     },
-                    "experience_level": {
+                    "contractor_tier": {
                         "label": "Experience",
                         "format": "tag"
                     },
@@ -227,25 +316,21 @@
                         "label": "Type", 
                         "format": "tag"
                     },
-                    "client_location": {
-                        "label": "Location",
-                        "format": "text"
+                    "status": {
+                        "label": "Status",
+                        "format": "tag"
                     },
-                    "proposals_count": {
-                        "label": "Proposals",
-                        "format": "text"
-                    },
-                    "posted_date": {
+                    "posted_on_relative": {
                         "label": "Posted",
                         "format": "text"
                     },
                     "budget": {
                         "label": "Budget",
-                        "format": "text"
+                        "format": "object"
                     },
-                    "hourly_rate": {
-                        "label": "Hourly Rate",
-                        "format": "text"
+                    "hourly_budget": {
+                        "label": "Hourly Budget",
+                        "format": "object"
                     }
                 }
             }
@@ -256,21 +341,18 @@
                 "fields": [
                     "title",
                     "description", 
-                    "hourly_rate",
-                    "budget",
-                    "skills",
-                    "experience_level",
                     "job_type",
-                    "client_location",
-                    "client_company_size",
-                    "client_industry",
-                    "proposals_count",
-                    "posted_date",
-                    "duration",
-                    "project_type",
-                    "work_hours",
-                    "total_spent",
-                    "total_hires",
+                    "contractor_tier",
+                    "status",
+                    "budget",
+                    "hourly_budget",
+                    "skills",
+                    "buyer",
+                    "client_activity",
+                    "category",
+                    "posted_on_relative",
+                    "duration_label",
+                    "engagement",
                     "url"
                 ]
             },

@@ -5,161 +5,91 @@ title: Authentication
 
 # API Authentication
 
-Secure access to our API using your unique API key. All requests must include proper authentication to access premium job data.
+Authenticate every request with your unique API key. The header is required for all endpoints, including the health check.
 
-## 🔑 API Key Authentication
+## API key header
 
-Every API request requires your API key in the `X-API-KEY` header:
+Send the header exactly as shown below:
 
 ```http
 GET /jobs HTTP/1.1
 Host: api.upworkjobsapi.com
-X-API-KEY: your-api-key-here
+X-API-KEY: your-api-key
 Content-Type: application/json
 ```
 
-## 🚀 Getting Your API Key
+- Use HTTPS for all requests.
+- Keys are case sensitive; copy them without extra spaces.
+- Authentication failures return `401 Unauthorized`.
 
-### Free Trial
-1. [Sign up for free trial](mailto:sales@upworkjobsapi.com?subject=Free%20Trial%20Signup)
-2. Receive your API key via email within 5 minutes
-3. Start making API calls immediately
+## Getting a key
 
-### Paid Plans
-1. [Choose your plan](/docs/pricing)
-2. Complete payment setup
-3. Receive production API key with higher limits
+1. Request trial access or select a paid plan by emailing [sales@upworkjobsapi.com](mailto:sales@upworkjobsapi.com).
+2. Receive your key via secure email within minutes.
+3. Store the key in your secrets manager or environment variables.
 
-## 🔒 Security Best Practices
+## Security best practices
 
-### Keep Your Key Secure
-- **Never expose in client-side code** - API keys should only be used server-side
-- **Store as environment variables** - Don't hardcode keys in your source code
-- **Use HTTPS only** - All API calls must use secure connections
-- **Rotate regularly** - Update your keys periodically for security
+- **Server-side use only**: Never expose keys in client-side scripts or public repositories.
+- **Environment isolation**: Maintain separate keys for development, staging, and production automations.
+- **Rotation**: Rotate keys Quarterly or when teammates roll off a project.
+- **Monitoring**: Track usage and revoke keys immediately if you notice unexpected traffic.
 
-### Environment Variables
+Example `.env` usage:
+
 ```bash
-# .env file
-UPWORK_API_KEY=your-api-key-here
+# .env
+UPWORK_API_KEY=your-api-key
 
-# Usage in code
+# local usage
 curl -H "X-API-KEY: $UPWORK_API_KEY" \
-  "https://api.upworkjobsapi.com/jobs"
-```
-
-### Multiple Environments
-Use different API keys for different environments:
-
-- **Development**: Limited rate limits, test data
-- **Staging**: Production-like environment for testing
-- **Production**: Full access with your plan's limits
-
-## ❌ Authentication Errors
-
-### Invalid API Key
-```json
-{
-  "success": false,
-  "message": "Invalid or missing X-API-KEY header",
-  "data": [],
-  "count": 0,
-  "last_updated": "2024-09-27T12:00:00Z"
-}
-```
-**Status Code**: `401 Unauthorized`
-
-### Missing API Key
-```json
-{
-  "success": false,
-  "message": "X-API-KEY header is required",
-  "data": [],
-  "count": 0,
-  "last_updated": "2024-09-27T12:00:00Z"
-}
-```
-**Status Code**: `401 Unauthorized`
-
-### Rate Limit Exceeded
-```json
-{
-  "success": false,
-  "message": "Rate limit exceeded. Upgrade your plan for higher limits.",
-  "data": [],
-  "count": 0,
-  "last_updated": "2024-09-27T12:00:00Z"
-}
-```
-**Status Code**: `429 Too Many Requests`
-
-## 🔄 API Key Management
-
-### Rotating Keys
-1. Generate new API key in your account dashboard
-2. Update your applications with the new key
-3. Test thoroughly before deactivating the old key
-4. Deactivate old key once migration is complete
-
-### Monitoring Usage
-- Track API calls in your account dashboard
-- Set up alerts for approaching rate limits
-- Monitor for unusual usage patterns
-
-### Multiple Keys
-Enterprise customers can have multiple API keys for:
-- Different applications or services
-- Team member access control
-- Environment separation
-
-## 🛠️ Implementation Examples
-
-### cURL
-```bash
-curl -H "X-API-KEY: your-api-key" \
-     -H "Content-Type: application/json" \
      "https://api.upworkjobsapi.com/jobs?limit=10"
 ```
 
-### Python (requests)
+## Error responses
+
+| Scenario | Status | Example message |
+|----------|--------|-----------------|
+| Missing header | 401 | `{"success": false, "message": "X-API-KEY header is required"}` |
+| Invalid key | 401 | `{"success": false, "message": "Invalid or missing X-API-KEY header"}` |
+| Rate limited | 429 | `{"success": false, "message": "Rate limit exceeded. Upgrade your plan for higher limits."}` |
+
+## Rotating keys safely
+
+1. Generate a new key in your console or by contacting support.
+2. Update downstream services in order: staging -> production.
+3. Confirm successful requests with the new key.
+4. Deactivate the old key once traffic is stable.
+
+## Example implementations
+
+### Python
 ```python
-import requests
 import os
+import requests
 
-headers = {
-    'X-API-KEY': os.getenv('UPWORK_API_KEY'),
-    'Content-Type': 'application/json'
-}
-
-response = requests.get(
-    'https://api.upworkjobsapi.com/jobs',
-    headers=headers,
-    params={'limit': 10}
-)
+api_key = os.environ["UPWORK_API_KEY"]
+headers = {"X-API-KEY": api_key, "Content-Type": "application/json"}
+response = requests.get("https://api.upworkjobsapi.com/jobs", headers=headers, timeout=10)
+response.raise_for_status()
 ```
 
-### JavaScript (axios)
+### Node.js (Axios)
 ```javascript
-const axios = require('axios');
+import axios from 'axios';
 
-const api = axios.create({
+const client = axios.create({
   baseURL: 'https://api.upworkjobsapi.com',
-  headers: {
-    'X-API-KEY': process.env.UPWORK_API_KEY,
-    'Content-Type': 'application/json'
-  }
+  headers: { 'X-API-KEY': process.env.UPWORK_API_KEY }
 });
 
-const response = await api.get('/jobs', {
-  params: { limit: 10 }
-});
+const { data } = await client.get('/jobs', { params: { limit: 5 } });
 ```
 
 ### PHP
 ```php
-$apiKey = $_ENV['UPWORK_API_KEY'];
 $headers = [
-    'X-API-KEY: ' . $apiKey,
+    'X-API-KEY: ' . getenv('UPWORK_API_KEY'),
     'Content-Type: application/json'
 ];
 
@@ -170,27 +100,11 @@ $context = stream_context_create([
     ]
 ]);
 
-$response = file_get_contents(
-    'https://api.upworkjobsapi.com/jobs?limit=10',
-    false,
-    $context
-);
+$response = file_get_contents('https://api.upworkjobsapi.com/jobs?limit=10', false, $context);
 ```
 
-## 🆘 Need Help?
+## Need help?
 
-### Common Issues
-- **Key not working?** Check for extra spaces or characters
-- **Getting 401 errors?** Verify the header name is exactly `X-API-KEY`
-- **Rate limits?** [Upgrade your plan](/docs/pricing) for higher limits
-
-### Support
-- [Technical Support](mailto:support@upworkjobsapi.com) - For authentication issues
-- [Sales Team](mailto:sales@upworkjobsapi.com) - For plan upgrades
-- [FAQ](/docs/support/faq) - Common questions and solutions
-
----
-
-**Ready to start making authenticated API calls?**
-
-[Get Your Free API Key](mailto:sales@upworkjobsapi.com?subject=Free%20Trial%20Signup)
+- Technical support: [support@upworkjobsapi.com](mailto:support@upworkjobsapi.com)
+- Key rotations and plan upgrades: [sales@upworkjobsapi.com](mailto:sales@upworkjobsapi.com)
+- Quick answers: [FAQ](/docs/support/faq)

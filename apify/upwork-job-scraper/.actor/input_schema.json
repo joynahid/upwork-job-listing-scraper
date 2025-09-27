@@ -3,19 +3,6 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "apiKey": {
-            "title": "API Key",
-            "type": "string",
-            "description": "API key used to authenticate requests to the Upwork Jobs API",
-            "editor": "password"
-        },
-        "apiEndpoint": {
-            "title": "API Endpoint",
-            "type": "string",
-            "description": "Base URL for the Upwork Jobs API",
-            "default": "https://upworkjobscraperapi.nahidhq.com",
-            "editor": "textfield"
-        },
         "maxJobs": {
             "title": "Maximum Jobs",
             "type": "integer",
@@ -25,120 +12,111 @@
             "default": 20,
             "editor": "number"
         },
-        "includeRawData": {
-            "title": "Include Raw API Payload",
+        "paymentVerified": {
+            "title": "Payment Verified Only",
             "type": "boolean",
-            "description": "Attach the full response payload for each job in the dataset output",
-            "default": true
-        },
-        "debugMode": {
-            "title": "Debug Logging",
-            "type": "boolean",
-            "description": "Enable verbose logging for troubleshooting",
+            "description": "Return only clients with a verified payment method",
             "default": false
         },
-        "filters": {
-            "title": "Job Filters",
-            "type": "object",
-            "description": "Optional filters forwarded to the jobs API",
-            "properties": {
-                "paymentVerified": {
-                    "title": "Payment Verified Only",
-                    "type": "boolean",
-                    "description": "Return only clients with a verified payment method"
-                },
-                "category": {
-                    "title": "Category Slug",
-                    "type": "string",
-                    "description": "Filter by Upwork specialty category slug (e.g. web-mobile-software-dev)"
-                },
-                "categoryGroup": {
-                    "title": "Category Group Slug",
-                    "type": "string",
-                    "description": "Filter by Upwork category group slug (e.g. dev-it)"
-                },
-                "status": {
-                    "title": "Job Status",
-                    "type": "string",
-                    "description": "Filter by job status",
-                    "enum": [
-                        "open",
-                        "closed"
-                    ],
-                    "editor": "select"
-                },
-                "jobType": {
-                    "title": "Job Type",
-                    "type": "string",
-                    "description": "Contract type for the engagement",
-                    "enum": [
-                        "hourly",
-                        "fixed-price"
-                    ],
-                    "editor": "select"
-                },
-                "contractorTier": {
-                    "title": "Contractor Tier",
-                    "type": "string",
-                    "description": "Requested experience level",
-                    "enum": [
-                        "entry",
-                        "intermediate",
-                        "expert"
-                    ],
-                    "editor": "select"
-                },
-                "country": {
-                    "title": "Client Country",
-                    "type": "string",
-                    "description": "Two-letter ISO country code (e.g. US, GB)"
-                },
-                "tags": {
-                    "title": "Required Tags",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "description": "List of tags that must be present on the job"
-                },
-                "postedAfter": {
-                    "title": "Posted After",
-                    "type": "string",
-                    "description": "Only include jobs posted after this ISO 8601 timestamp (e.g. 2024-04-01T00:00:00Z)",
-                    "editor": "textfield"
-                },
-                "postedBefore": {
-                    "title": "Posted Before",
-                    "type": "string",
-                    "description": "Only include jobs posted before this ISO 8601 timestamp",
-                    "editor": "textfield"
-                },
-                "budgetMin": {
-                    "title": "Minimum Fixed Budget",
-                    "type": "number",
-                    "description": "Filter jobs with a fixed budget greater than or equal to this amount"
-                },
-                "budgetMax": {
-                    "title": "Maximum Fixed Budget",
-                    "type": "number",
-                    "description": "Filter jobs with a fixed budget less than or equal to this amount"
-                },
-                "sort": {
-                    "title": "Sort Order",
-                    "type": "string",
-                    "description": "Sort results by posted date or last visited timestamp",
-                    "enum": [
-                        "last_visited_desc",
-                        "last_visited_asc",
-                        "posted_on_desc",
-                        "posted_on_asc"
-                    ],
-                    "editor": "select"
-                }
-            }
+        "category": {
+            "title": "Category Slug",
+            "type": "string",
+            "description": "Filter by Upwork specialty category slug (e.g. web-mobile-software-dev)",
+            "editor": "textfield"
+        },
+        "categoryGroup": {
+            "title": "Category Group Slug",
+            "type": "string",
+            "description": "Filter by Upwork category group slug (e.g. dev-it)",
+            "editor": "textfield"
+        },
+        "status": {
+            "title": "Job Status",
+            "type": "string",
+            "description": "Filter by job status",
+            "enum": [
+                "",
+                "open",
+                "closed"
+            ],
+            "editor": "select",
+            "default": ""
+        },
+        "jobType": {
+            "title": "Job Type",
+            "type": "string",
+            "description": "Contract type for the engagement",
+            "enum": [
+                "",
+                "hourly",
+                "fixed-price"
+            ],
+            "editor": "select",
+            "default": ""
+        },
+        "contractorTier": {
+            "title": "Contractor Tier",
+            "type": "string",
+            "description": "Requested experience level",
+            "enum": [
+                "",
+                "entry",
+                "intermediate",
+                "expert"
+            ],
+            "editor": "select",
+            "default": ""
+        },
+        "country": {
+            "title": "Client Country",
+            "type": "string",
+            "description": "Two-letter ISO country code (e.g. US, GB, CA, AU)",
+            "editor": "textfield"
+        },
+        "tags": {
+            "title": "Required Tags",
+            "type": "string",
+            "description": "Comma-separated list of tags that must be present on the job (e.g. React, Node.js, Python)",
+            "editor": "textfield"
+        },
+        "postedAfter": {
+            "title": "Posted After",
+            "type": "string",
+            "description": "Only include jobs posted after this date (ISO format: 2024-04-01T00:00:00Z)",
+            "editor": "textfield"
+        },
+        "postedBefore": {
+            "title": "Posted Before",
+            "type": "string",
+            "description": "Only include jobs posted before this date (ISO format: 2024-04-01T00:00:00Z)",
+            "editor": "textfield"
+        },
+        "budgetMin": {
+            "title": "Minimum Fixed Budget",
+            "type": "string",
+            "description": "Filter jobs with a fixed budget greater than or equal to this amount (e.g. 1000)",
+            "editor": "textfield"
+        },
+        "budgetMax": {
+            "title": "Maximum Fixed Budget", 
+            "type": "string",
+            "description": "Filter jobs with a fixed budget less than or equal to this amount (e.g. 5000)",
+            "editor": "textfield"
+        },
+        "sort": {
+            "title": "Sort Order",
+            "type": "string",
+            "description": "Sort results by posted date or last visited timestamp",
+            "enum": [
+                "",
+                "last_visited_desc",
+                "last_visited_asc", 
+                "posted_on_desc",
+                "posted_on_asc"
+            ],
+            "editor": "select",
+            "default": ""
         }
     },
-    "required": [
-        "apiKey"
-    ]
+    "required": []
 }

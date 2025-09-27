@@ -1,69 +1,39 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
 import { Section } from "@/components/ui/Section";
 import { benefits } from "@/data/landing";
 
+const FEATURE_COUNT = 3;
+
 export function BenefitsSection() {
+  const featuredBenefits = benefits.slice(0, FEATURE_COUNT);
+
   return (
-    <Section id="features" padding="lg">
-      <div className="text-center mb-16">
-        <h2 className="text-3xl sm:text-4xl font-bold mb-4">Why Choose Our Job Feed?</h2>
-        <p className="text-lg text-base-content/70 max-w-2xl mx-auto">
-          Built specifically for automation professionals who need reliable, real-time access to
-          high-quality Upwork opportunities.
+    <Section id="features" padding="lg" background="muted">
+      <div className="mx-auto max-w-2xl text-center">
+        <h2 className="text-3xl font-semibold text-base-content sm:text-4xl">
+          Ready-to-use data without the cleanup
+        </h2>
+        <p className="mt-4 text-base text-base-content/70 sm:text-lg">
+          Every record is normalized, enriched, and easy to plug into your workflows. No more
+          parsing HTML or wrangling inconsistent fields.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {benefits.map((benefit) => (
-          <Card
+      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {featuredBenefits.map((benefit) => (
+          <div
             key={benefit.title}
-            hover
-            className={`${
-              benefit.highlight
-                ? "ring-2 ring-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5"
-                : ""
-            } transition-all duration-300 hover:scale-105`}
+            className="flex h-full flex-col gap-4 rounded-2xl border border-base-300 bg-base-100/70 p-6 text-left shadow-sm"
           >
-            <CardHeader>
-              <div className="flex items-start gap-4">
-                <div className="text-primary flex-shrink-0 mt-1">
-                  <Icon name={benefit.icon} size="lg" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
-                    {benefit.title}
-                    {benefit.highlight && (
-                      <span className="badge badge-primary badge-sm">Popular</span>
-                    )}
-                  </h3>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-base-content/70 leading-relaxed">{benefit.description}</p>
-            </CardContent>
-          </Card>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Icon name={benefit.icon} />
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-xl font-semibold text-base-content">{benefit.title}</h3>
+              <p className="text-base text-base-content/70">{benefit.description}</p>
+            </div>
+          </div>
         ))}
-      </div>
-
-      {/* Additional Stats */}
-      <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-        <div className="space-y-3">
-          <Icon name="clock" className="text-primary mx-auto" size="xl" />
-          <div className="text-3xl font-bold text-primary">30s</div>
-          <div className="text-sm text-base-content/70">Average notification time</div>
-        </div>
-        <div className="space-y-3">
-          <Icon name="shield" className="text-primary mx-auto" size="xl" />
-          <div className="text-3xl font-bold text-primary">99.9%</div>
-          <div className="text-sm text-base-content/70">Service uptime</div>
-        </div>
-        <div className="space-y-3">
-          <Icon name="trending-up" className="text-primary mx-auto" size="xl" />
-          <div className="text-3xl font-bold text-primary">10k+</div>
-          <div className="text-sm text-base-content/70">Jobs processed daily</div>
-        </div>
       </div>
     </Section>
   );

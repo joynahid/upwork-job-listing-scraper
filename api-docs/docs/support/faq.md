@@ -5,197 +5,73 @@ title: Frequently Asked Questions
 
 # Frequently Asked Questions
 
-Get quick answers to common questions about our Upwork Jobs API service.
+Answers to the questions creators, newsletter teams, and automation engineers ask most often.
 
-## 🚀 Getting Started
+## Getting started
 
-### How do I get started with the API?
-1. [Sign up for a free trial](mailto:sales@upworkjobsapi.com?subject=Free%20Trial%20Signup) - no credit card required
-2. Receive your API key via email within 5 minutes
-3. Make your first API call using our [Getting Started guide](/docs/getting-started)
-4. Explore the data and upgrade to a paid plan when ready
+**How do I access the API?**  
+Request a free trial or paid plan at [sales@upworkjobsapi.com](mailto:sales@upworkjobsapi.com). Your API key is issued within minutes and works instantly with the [quick start guide](/docs/getting-started).
 
-### Do I need a credit card for the free trial?
-No! Our free trial includes 1,000 API calls with no credit card required. You only need to provide payment information when upgrading to a paid plan.
+**Do I need a credit card for the trial?**  
+No. The Starter tier includes 1,000 calls each month without a credit card. Upgrade when you are ready to scale.
 
-### How quickly can I get access?
-API keys are generated automatically and sent via email within 5 minutes of signup. You can start making API calls immediately.
+**How fresh is the data?**  
+Jobs flow into the API continuously. In most cases new briefs appear within 15-30 minutes of being posted on Upwork.
 
-## 💰 Pricing & Plans
+## Plans and usage
 
-### What's included in the free plan?
-- 1,000 API calls per month
-- Access to all job data fields
-- Basic filtering options
-- Email support
-- 7-day data retention
+**What is included in each plan?**
+- **Starter:** 1,000 calls/month, seven-day retention, email support.
+- **Professional:** 25,000 calls/month, webhook delivery, 30-day retention, priority support.
+- **Business:** 100,000 calls/month, historical lookups, Discord/Telegram delivery modules, account manager.
+- **Enterprise:** Custom scale, dedicated infrastructure, full archive access, bespoke integrations.
 
-### Can I upgrade or downgrade my plan?
-Yes! You can change plans anytime. Upgrades take effect immediately, and downgrades take effect at your next billing cycle. All changes are prorated.
+**Can I change plans later?**  
+Yes. Upgrades take effect immediately. Downgrades apply at the next billing cycle. All adjustments are prorated.
 
-### Do you offer annual discounts?
-Yes! Save 20% on Professional plans and 25% on Business plans with annual billing.
+**What happens if I exceed my quota?**  
+Professional and Business plans charge $0.01 for each additional call. Starter requests pause until the next cycle or an upgrade. Enterprise overages follow your contract.
 
-### What happens if I exceed my plan limits?
-- **Professional/Business**: Pay $0.01 per additional API call
-- **Starter**: API calls are blocked until next month or upgrade
-- **Enterprise**: Custom overage rates based on your agreement
+## Technical details
 
-## 🔧 Technical Questions
+**What format do responses use?**  
+All endpoints return JSON with a consistent envelope (`success`, `data`, `count`, `last_updated`). See the [endpoint reference](/docs/api/endpoints) for full schema details.
 
-### What data format does the API return?
-All responses are in JSON format with consistent structure. See our [API documentation](/docs/api/endpoints) for detailed response schemas.
+**Which filters are available?**  
+You can filter by payment verification, spend, skills/tags, category, posting time, and more. Review the [filtering guide](/docs/api/filtering) for the full matrix.
 
-### How fresh is the job data?
-Job data is updated continuously throughout the day. Most new postings appear in our API within 15-30 minutes of being posted on Upwork.
+**Do you support webhooks?**  
+Webhook delivery is included in Professional plans and above. You can push events directly to n8n, Zapier, Make, or any HTTPS endpoint.
 
-### Can I get historical data?
-- **Starter**: 7 days of data retention
-- **Professional**: 30 days of data retention  
-- **Business**: 6 months of historical data
-- **Enterprise**: Full historical access available
+**Can I integrate with Discord or Telegram?**  
+Yes. Use Zapier, Make, or our direct webhook payloads to post formatted digests into channels. Business plans include dedicated modules and onboarding templates.
 
-### What's your API uptime?
-We maintain 99.9% uptime with monitoring and alerts. Enterprise customers can get custom SLA agreements with higher guarantees.
+## Data and compliance
 
-### Do you have rate limits?
-Yes, to ensure fair usage:
-- **Starter**: 10 requests per minute
-- **Professional**: 100 requests per minute
-- **Business**: 500 requests per minute
-- **Enterprise**: Custom limits based on needs
+**How accurate is the dataset?**  
+We filter spam and duplicates automatically and track buyer metadata to maintain a 99.5% accuracy rate.
 
-## 🔒 Security & Compliance
+**Is historical data available?**  
+Starter retains seven days, Professional thirty, Business six months, and Enterprise unlocks the full archive with replay tooling.
 
-### How secure is my data?
-- All API calls use HTTPS encryption
-- API keys are encrypted at rest
-- We're SOC 2 Type II compliant
-- Regular security audits and monitoring
+**Is the API compliant with GDPR/SOC 2?**  
+Yes. Data is encrypted in transit and at rest. Enterprise plans include data processing agreements and customised compliance support.
 
-### Do you store my API requests?
-We log basic request metadata (timestamp, endpoint, response code) for monitoring and support purposes. We don't store the actual response data you receive.
+## Troubleshooting
 
-### Is the API GDPR compliant?
-Yes, we follow GDPR guidelines for data handling and provide data processing agreements for Enterprise customers.
+**I received a 401 error. What now?**  
+Confirm the header is `X-API-KEY`, ensure the value is correct, and check that the key has not been rotated or revoked.
 
-### Can I use this data commercially?
-Yes, all our plans allow commercial use of the data. Please respect Upwork's terms of service and applicable data protection laws.
+**My query returns zero results.**  
+Start broader: remove one filter at a time, verify parameter names, and confirm you are using ISO 8601 timestamps where required.
 
-## 🎯 Use Cases & Integration
+**Requests seem slow.**  
+Limit the number of records per call, narrow filters, and cache recent responses. Network latency in automation platforms can also contribute to delays.
 
-### What can I build with this API?
-Popular use cases include:
-- Lead generation tools for freelancers and agencies
-- Market research and trend analysis
-- Job recommendation engines
-- Competitive intelligence dashboards
-- Automated client prospecting systems
+## Support
 
-### Do you provide SDKs or libraries?
-We provide code examples in Python, JavaScript, PHP, and cURL. Full SDKs are available for Enterprise customers.
+- Technical support: [support@upworkjobsapi.com](mailto:support@upworkjobsapi.com) (response within plan-specific SLA)
+- Billing: [accounts@upworkjobsapi.com](mailto:accounts@upworkjobsapi.com)
+- Sales and partnerships: [sales@upworkjobsapi.com](mailto:sales@upworkjobsapi.com)
 
-### Can I integrate with my CRM?
-Yes! Many customers integrate our API with Salesforce, HubSpot, and other CRM systems. We can provide integration guidance.
-
-### Do you support webhooks?
-Webhook notifications are available on Business and Enterprise plans. Get real-time alerts when new jobs match your criteria.
-
-## 📊 Data Quality & Coverage
-
-### How accurate is the job data?
-We maintain 99.5% data accuracy through automated validation and spam filtering. All job postings are verified before inclusion in our API.
-
-### What job categories are covered?
-We cover all Upwork categories including:
-- Development & IT
-- Design & Creative
-- Writing & Translation
-- Sales & Marketing
-- Admin & Customer Support
-- Finance & Accounting
-- Engineering & Architecture
-- Legal services
-
-### Do you filter out spam or low-quality jobs?
-Yes! Our advanced filtering removes:
-- Duplicate postings
-- Spam and fake jobs
-- Jobs with suspicious client activity
-- Postings that violate Upwork's terms
-
-### How many jobs are available daily?
-We process thousands of new job postings daily. The exact number varies based on market activity and your filtering criteria.
-
-## 🛠️ Troubleshooting
-
-### I'm getting 401 authentication errors
-- Check that your API key is correct
-- Ensure you're using the header name `X-API-KEY`
-- Verify there are no extra spaces or characters
-- Make sure your key hasn't expired
-
-### My requests are being rate limited
-- Check your current plan's rate limits
-- Implement exponential backoff in your code
-- Consider upgrading to a higher plan
-- Cache responses to reduce API calls
-
-### I'm not getting any results
-- Verify your filters aren't too restrictive
-- Check that parameter names and values are correct
-- Try a broader search first, then narrow down
-- Ensure you're using the correct date format for time filters
-
-### The API is responding slowly
-- Use more specific filters to reduce response size
-- Lower your limit parameter if you don't need many results
-- Check if you're making too many concurrent requests
-- Consider caching frequently requested data
-
-## 📞 Support & Contact
-
-### How do I get technical support?
-- **Email**: [support@upworkjobsapi.com](mailto:support@upworkjobsapi.com)
-- **Response Time**: Within 24 hours (faster for paid plans)
-- **Business/Enterprise**: Priority support with faster response times
-
-### Can I schedule a demo or consultation?
-Yes! [Contact our sales team](mailto:sales@upworkjobsapi.com?subject=Demo%20Request) to schedule a personalized demo or discuss your specific use case.
-
-### Do you offer custom development?
-Enterprise customers can request custom features, integrations, and data processing. Contact us to discuss your requirements.
-
-### How do I report a bug or issue?
-Email [support@upworkjobsapi.com](mailto:support@upworkjobsapi.com) with:
-- Description of the issue
-- Your API key (last 4 characters only)
-- Example request that's causing problems
-- Expected vs actual behavior
-
-## 💡 Best Practices
-
-### How can I optimize my API usage?
-- Use specific filters to get targeted results
-- Cache responses when appropriate
-- Implement proper error handling and retries
-- Monitor your usage to avoid unexpected overages
-
-### What's the best way to handle rate limits?
-- Implement exponential backoff
-- Spread requests over time instead of bursts
-- Use webhooks for real-time updates instead of polling
-- Cache frequently accessed data
-
-### How should I store the API data?
-- Follow data protection regulations in your jurisdiction
-- Don't store personal information unnecessarily
-- Implement proper data retention policies
-- Ensure secure storage and access controls
-
----
-
-**Still have questions?**
-
-[Contact Support](mailto:support@upworkjobsapi.com)
-[Schedule Consultation](mailto:sales@upworkjobsapi.com?subject=Consultation%20Request)
+Still need help? [Book a consultation](mailto:sales@upworkjobsapi.com?subject=Consultation%20Request) and we will walk through your use case, filters, and automation plan.

@@ -5,187 +5,138 @@ title: Getting Started
 
 # Getting Started
 
-Start accessing premium Upwork job data in minutes. Our simple API makes it easy to integrate high-quality job information into your applications and workflows.
+Spin up Upwork Jobs API, capture your first briefs, and connect them to the channels where you plan, automate, and publish. The workflow below takes most teams less than ten minutes.
 
-## 🚀 Quick Start (3 Steps)
+## Quick start in three steps
 
-### Step 1: Sign Up for Free Trial
+### 1. Request access
+- Start with the free tier for 1,000 monthly calls: [Create free account](mailto:sales@upworkjobsapi.com?subject=Free%20Trial%20Signup).
+- Paid plans unlock higher limits, historical lookups, and dedicated support: [Compare plans](/docs/pricing).
+- Your API key arrives by email; keep it available for the next steps.
 
-No credit card required - get started immediately with 1,000 free API calls.
-
-[Create Free Account](mailto:sales@upworkjobsapi.com?subject=Free%20Trial%20Signup)
-
-*You'll receive your API key within 5 minutes via email.*
-
-### Step 2: Make Your First API Call
-
-Use your API key to fetch the latest job postings:
+### 2. Verify your credentials
 
 ```bash
-curl -H "X-API-KEY: your-api-key-here" \
-  "https://api.upworkjobsapi.com/jobs?limit=5&payment_verified=true"
+curl -H "X-API-KEY: your-api-key" \
+     "https://api.upworkjobsapi.com/health"
 ```
 
-### Step 3: Explore the Data
-
-Each job includes rich information about the client, budget, requirements, and more:
+Expected response:
 
 ```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "upwork-123456",
-      "title": "Full-Stack Developer for E-commerce Platform",
-      "description": "We need an experienced developer to build...",
-      "budget": {
-        "fixed_amount": 5000,
-        "currency": "USD"
-      },
-      "buyer": {
-        "payment_verified": true,
-        "country": "US",
-        "total_spent": 125000,
-        "total_jobs_with_hires": 15
-      },
-      "posted_on": "2024-09-27T10:30:00Z",
-      "skills": ["React", "Node.js", "MongoDB"],
-      "url": "https://www.upwork.com/jobs/~01abc123"
-    }
-  ],
-  "count": 1
-}
+{"success": true, "message": "API is healthy", "count": 0}
 ```
 
-## 🔑 Authentication
+### 3. Fetch your first batch
 
-Every API request requires your unique API key in the header:
+```bash
+curl -H "X-API-KEY: your-api-key" \
+     "https://api.upworkjobsapi.com/jobs?limit=5&payment_verified=true&category=writing-translation"
+```
+
+Each job includes stable IDs, buyer spend, budgets, tags, and timestamps so you can immediately rank which briefs fit your next issue or segment.
+
+## Authenticate securely
+
+Send your key in the `X-API-KEY` header on every request.
 
 ```http
-GET /jobs HTTP/1.1
+GET /jobs?limit=20 HTTP/1.1
 Host: api.upworkjobsapi.com
-X-API-KEY: your-api-key-here
+X-API-KEY: your-api-key
+Content-Type: application/json
 ```
 
-**Keep your API key secure:**
-- Never expose it in client-side code
-- Store it as an environment variable
-- Rotate it regularly for security
+Best practices:
+- Store keys in environment variables or your team secret manager.
+- Use separate keys for development, staging, and production automations.
+- Rotate keys quarterly and remove unused credentials promptly.
 
-## 🎯 Common Use Cases
+## Map data to your stack
 
-### Find High-Value Clients
-```bash
-# Jobs over $3,000 from verified clients
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?budget_min=3000&payment_verified=true"
-```
+| Target | How to connect | Recommended fields |
+|--------|----------------|--------------------|
+| Airtable / Notion | Use Zapier, Make, or n8n to push API responses into tables each morning. | `title`, `budget.fixed_amount`, `buyer.payment_verified`, `skills`, `url`, `posted_on` |
+| Idea backlogs | Parse the JSON into your prompt templates to surface pain points, solution framing, and positioning cues. | `description`, `tags`, `client_activity.total_applicants`, `buyer.total_spent` |
+| Newsletters & digests | Schedule a daily fetch, score briefs, and send highlights to ESPs or chat communities. | `title`, `budget`, `posted_on`, curated metadata |
 
-### Track Your Niche
-```bash
-# Recent web development projects
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?category=web-development&posted_after=2024-09-20T00:00:00Z"
-```
+## Automation recipes
 
-### Monitor Competitors
-```bash
-# Jobs requiring specific skills
-curl -H "X-API-KEY: your-key" \
-  "https://api.upworkjobsapi.com/jobs?tags=react,typescript&sort=posted_on_desc"
-```
+### n8n
+1. Add an **HTTP Request** node with `GET https://api.upworkjobsapi.com/jobs`.
+2. Configure headers with `X-API-KEY` and any query parameters (for example `tags=ai,marketing`).
+3. Use a **Set** node to reshape fields into your newsletter template.
+4. Deliver to Notion, Google Sheets, or MailerLite nodes downstream.
 
-## 📊 Understanding the Data
+### Zapier
+1. Create a **Schedule** trigger (daily or hourly).
+2. Add a **Webhooks by Zapier** step (GET) targeting the `/jobs` endpoint.
+3. Filter or format records with **Formatter** utilities.
+4. Send the curated list to Airtable, Slack, Discord, or your ESP.
 
-### Job Information
-- **Title & Description**: Project details and requirements
-- **Budget**: Fixed price or hourly rate ranges
-- **Skills**: Required technical and soft skills
-- **Timeline**: Project duration and urgency
+### Make (Integromat)
+1. Start with a **HTTP** module and set authentication headers.
+2. Insert a **Array aggregator** to batch jobs into a single payload.
+3. Push results to Google Docs for script outlines or to Telegram for curated drops.
 
-### Client Intelligence
-- **Payment Verification**: Confirmed payment method on file
-- **Spending History**: Total amount spent on Upwork
-- **Hiring Activity**: Number of successful hires
-- **Location**: Country and timezone information
+## Creator-focused examples
 
-### Market Signals
-- **Application Count**: Number of freelancers who applied
-- **Invitation Activity**: How many freelancers were invited
-- **Last Activity**: When the client was last active
-
-## 🛠️ Integration Examples
-
-### Python
+### Python: score briefs for newsletter fit
 ```python
 import requests
 
-headers = {'X-API-KEY': 'your-api-key'}
-response = requests.get(
-    'https://api.upworkjobsapi.com/jobs',
-    headers=headers,
-    params={'payment_verified': True, 'limit': 10}
-)
-jobs = response.json()['data']
+API_URL = "https://api.upworkjobsapi.com/jobs"
+HEADERS = {"X-API-KEY": "your-api-key"}
+PARAMS = {
+    "payment_verified": True,
+    "tags": "newsletter,content marketing",
+    "limit": 15,
+    "sort": "posted_on_desc"
+}
+
+response = requests.get(API_URL, headers=HEADERS, params=PARAMS, timeout=10)
+response.raise_for_status()
+jobs = response.json()["data"]
+
+newsletter_ready = [job for job in jobs if job["buyer"]["total_spent"] >= 10000]
 ```
 
-### JavaScript/Node.js
+### Node.js: push high-signal jobs to Discord
 ```javascript
-const axios = require('axios');
+import axios from 'axios';
 
-const response = await axios.get('https://api.upworkjobsapi.com/jobs', {
-  headers: { 'X-API-KEY': 'your-api-key' },
-  params: { payment_verified: true, limit: 10 }
+const api = axios.create({
+  baseURL: 'https://api.upworkjobsapi.com',
+  headers: { 'X-API-KEY': process.env.UPWORK_API_KEY }
 });
-const jobs = response.data.data;
+
+const { data } = await api.get('/jobs', {
+  params: { payment_verified: true, limit: 5, tags: 'ai,research' }
+});
+
+const topBriefs = data.data
+  .map((job) => `- **${job.title}** - $${job.budget?.fixed_amount ?? 'N/A'} | ${job.buyer.total_spent} lifetime spend`)
+  .join('\n');
+
+await axios.post(process.env.DISCORD_WEBHOOK_URL, {
+  content: `Fresh AI briefs from Upwork:\n${topBriefs}`
+});
 ```
 
-### PHP
-```php
-$headers = ['X-API-KEY: your-api-key'];
-$url = 'https://api.upworkjobsapi.com/jobs?payment_verified=true&limit=10';
-$response = file_get_contents($url, false, stream_context_create([
-    'http' => ['header' => implode("\r\n", $headers)]
-]));
-$jobs = json_decode($response, true)['data'];
+### cURL: Telegram digest via Make webhook
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 10, "tags": "copywriting,marketing"}' \
+  "https://hook.make.com/your-make-webhook-id"
 ```
+Connect the webhook to a Make scenario that calls the Upwork Jobs API, formats the highlights, and posts them into your Telegram channel.
 
-## 📈 Next Steps
+## Next milestones
 
-### Explore Advanced Features
-- [View all filtering options](/docs/api/filtering)
-- [Learn about rate limits](/docs/support/rate-limits)
-- [See real-world use cases](/docs/use-cases)
+1. [Dive into endpoint specifics](/docs/api/endpoints) for full schema details.
+2. [Fine-tune filters](/docs/api/filtering) to align with your beat or niche.
+3. [Confirm rate limits](/docs/support/rate-limits) before scheduling automations.
+4. [Reach out to support](/docs/support/contact) for custom integrations or onboarding workshops.
 
-### Get More API Calls
-- [Upgrade to Professional plan](/docs/pricing) for 25,000 monthly calls
-- [Contact us for Enterprise pricing](/docs/support/contact) for unlimited access
-
-### Need Help?
-- [Check our FAQ](/docs/support/faq) for common questions
-- [Contact support](/docs/support/contact) for technical assistance
-- [Schedule a consultation](mailto:sales@upworkjobsapi.com?subject=Integration%20Help) for custom integration help
-
-## 🔒 Security & Best Practices
-
-### API Key Security
-- Store keys in environment variables, not code
-- Use different keys for development and production
-- Monitor usage in your account dashboard
-
-### Rate Limiting
-- Respect rate limits to ensure consistent access
-- Implement exponential backoff for retries
-- Cache responses when appropriate
-
-### Data Handling
-- Follow data protection regulations in your jurisdiction
-- Don't store personal information unnecessarily
-- Respect Upwork's terms of service
-
----
-
-**Ready to transform your business with premium job data?**
-
-- [Start Free Trial](mailto:sales@upworkjobsapi.com?subject=Free%20Trial%20Signup)
-- [View Pricing](/docs/pricing)
+Stay close to buyer demand, build better ideas, and keep your audience subscribed with fresher insights.

@@ -35,11 +35,12 @@ class UpworkJobAPIWrapper:
             timeout=30.0, headers={"X-API-KEY": self.api_key}
         )
 
-    async def fetch_jobs(self, max_jobs: int) -> Dict[str, Any]:
+    async def fetch_jobs(self, max_jobs: int, filters: Dict[str, Any] = None) -> Dict[str, Any]:
         """Fetch jobs from the Go API.
 
         Args:
             max_jobs: Maximum number of jobs to fetch
+            filters: Optional filters to apply to the job search
 
         Returns:
             API response containing job data
@@ -49,9 +50,33 @@ class UpworkJobAPIWrapper:
         """
         jobs_url = f"{self.api_endpoint}/jobs"
         params = {"limit": max_jobs} if max_jobs else {}
+        
+        # Add filters to params if provided
+        if filters:
+            # Map filter names to API parameter names
+            filter_mapping = {
+                "paymentVerified": "payment_verified",
+                "categoryGroup": "category_group",
+                "jobType": "job_type",
+                "contractorTier": "contractor_tier",
+                "postedAfter": "posted_after",
+                "postedBefore": "posted_before",
+                "budgetMin": "budget_min",
+                "budgetMax": "budget_max"
+            }
+            
+            for filter_key, filter_value in filters.items():
+                if filter_value is not None:
+                    api_param = filter_mapping.get(filter_key, filter_key)
+                    if filter_key == "tags" and isinstance(filter_value, list):
+                        params[api_param] = ",".join(filter_value)
+                    else:
+                        params[api_param] = filter_value
 
         if self.debug_mode:
             Actor.log.info(f"🔍 Fetching jobs from: {jobs_url} (limit: {max_jobs})")
+            if params:
+                Actor.log.info(f"🎯 Filters: {params}")
 
         try:
             response = await self.client.get(jobs_url, params=params)
@@ -108,14 +133,14 @@ class UpworkJobAPIWrapper:
 
 
 async def process_jobs_simple(
-    jobs: List[Dict[str, Any]], include_raw_data: bool, debug_mode: bool, max_jobs: int
+    jobs: List[Dict[str, Any]], debug_mode: bool, max_jobs: int
 ) -> int:
-    """Process jobs simply - just save them to Apify dataset.
+    """Process jobs simply - save them to Apify dataset exactly as received from Go API.
 
     Args:
-        jobs: List of job data from API
-        include_raw_data: Whether to include raw data in output
+        jobs: List of job data from API (JobDTO format)
         debug_mode: Enable debug logging
+        max_jobs: Maximum number of jobs to process
 
     Returns:
         Number of jobs processed
@@ -129,45 +154,12 @@ async def process_jobs_simple(
 
     for job in jobs[:total_jobs_to_process]:
         try:
-            # Transform job data for Apify output
-            job_data = job.get("data", {})
-            output_job = {
-                "job_id": job.get("job_id") or "unknown",
-                "title": job_data.get("title") or "No title",
-                "description": job_data.get("description") or "",
-                "url": job_data.get("url") or "",
-                "hourly_rate": job_data.get("hourly_rate"),
-                "budget": job_data.get("budget"),
-                "experience_level": job_data.get("experience_level"),
-                "job_type": job_data.get("job_type"),
-                "skills": job_data.get("skills") or [],
-                "client_location": job_data.get("client_location"),
-                "client_company_size": job_data.get("client_company_size"),
-                "client_industry": job_data.get("client_industry"),
-                "client_local_time": job_data.get("client_local_time"),
-                "posted_date": job_data.get("posted_date"),
-                "posted_on_relative": job_data.get("posted_on_relative") or job.get("posted_on_relative"),
-                "proposals_count": job_data.get("proposals_count"),
-                "duration": job_data.get("duration"),
-                "project_type": job_data.get("project_type"),
-                "work_hours": job_data.get("work_hours"),
-                "member_since": job_data.get("member_since"),
-                "total_spent": job_data.get("total_spent"),
-                "total_hires": job_data.get("total_hires"),
-                "total_active": job_data.get("total_active"),
-                "total_client_hours": job_data.get("total_client_hours"),
-                "interviewing": job_data.get("interviewing"),
-                "invites_sent": job_data.get("invites_sent"),
-                "unanswered_invites": job_data.get("unanswered_invites"),
-                "hires": job_data.get("hires"),
-                "last_viewed_by_client": job_data.get("last_viewed_by_client"),
-                "last_visited_at": job.get("last_visited_at"),
-                "scraped_at": datetime.now().isoformat(),
-            }
-
-            # Add raw data if requested
-            if include_raw_data:
-                output_job["raw_data"] = job
+            # Pass through the job data exactly as received from Go API
+            # The Go API returns JobDTO objects that match our schema
+            output_job = job.copy()  # Make a copy to avoid modifying original
+            
+            # Add scraped timestamp
+            output_job["scraped_at"] = datetime.now().isoformat()
 
             # Push to Apify dataset with pay-per-event charging
             await Actor.push_data(output_job, 'api-result')
@@ -175,14 +167,29 @@ async def process_jobs_simple(
             processed_count += 1
 
             # Log progress
+            job_title = output_job.get('title', 'Unknown Title')
             Actor.log.info(
-                f"✅ Saved job {processed_count}: {output_job['title'][:50]}..."
+                f"✅ Saved job {processed_count}: {job_title[:50]}..."
             )
 
             if debug_mode:
-                Actor.log.info(f"   📊 Job ID: {output_job['job_id']}")
-                Actor.log.info(f"   💰 Rate: {output_job['hourly_rate']}")
-                Actor.log.info(f"   📍 Location: {output_job['client_location']}")
+                Actor.log.info(f"   📊 Job ID: {output_job.get('id', 'N/A')}")
+                Actor.log.info(f"   🏷️ Job Type: {output_job.get('job_type', 'N/A')}")
+                Actor.log.info(f"   🎯 Contractor Tier: {output_job.get('contractor_tier', 'N/A')}")
+                Actor.log.info(f"   🔒 Private: {output_job.get('is_private', False)}")
+                
+                # Log budget info
+                budget = output_job.get('budget', {})
+                if budget and budget.get('fixed_amount'):
+                    Actor.log.info(f"   💰 Budget: ${budget.get('fixed_amount')} {budget.get('currency', 'USD')}")
+                
+                # Log hourly info
+                hourly = output_job.get('hourly_budget', {})
+                if hourly and (hourly.get('min') or hourly.get('max')):
+                    min_rate = hourly.get('min', 0)
+                    max_rate = hourly.get('max', 0)
+                    currency = hourly.get('currency', 'USD')
+                    Actor.log.info(f"   💵 Hourly: ${min_rate}-${max_rate} {currency}")
 
         except Exception as e:
             Actor.log.error(f"❌ Failed to process job: {e}")
@@ -201,12 +208,30 @@ async def main() -> None:
         # Get Actor input
         actor_input = await Actor.get_input() or {}
 
-        # Extract configuration
+        # Extract configuration from environment variables
         api_key = os.getenv("API_KEY")
         api_endpoint = os.getenv("API_ENDPOINT", "https://upworkjobscraperapi.nahidhq.com")
-        max_jobs = actor_input.get("maxJobs", 50)
-        include_raw_data = True  # Always include raw data
-        debug_mode = False  # Debug mode disabled for simplicity
+        debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+        
+        # Get configuration from actor input
+        max_jobs = actor_input.get("maxJobs", 20)
+        
+        # Build filters object from individual input fields
+        filters = {}
+        filter_fields = [
+            "paymentVerified", "category", "categoryGroup", "status", 
+            "jobType", "contractorTier", "country", "tags", 
+            "postedAfter", "postedBefore", "budgetMin", "budgetMax", "sort"
+        ]
+        
+        for field in filter_fields:
+            value = actor_input.get(field)
+            if value is not None and value != "":  # Skip empty strings and None values
+                if field == "tags" and isinstance(value, str):
+                    # Convert comma-separated string to list for tags
+                    filters[field] = [tag.strip() for tag in value.split(",") if tag.strip()]
+                else:
+                    filters[field] = value
 
         # Validate required inputs
         if not api_key:
@@ -222,6 +247,8 @@ async def main() -> None:
             Actor.log.info("📊 Configuration:")
             Actor.log.info(f"   API Endpoint: {api_endpoint}")
             Actor.log.info(f"   Max Jobs: {max_jobs}")
+            Actor.log.info(f"   Debug Mode: {debug_mode}")
+            Actor.log.info(f"   Filters: {filters}")
 
         # Initialize API wrapper
         api_wrapper = UpworkJobAPIWrapper(api_endpoint, api_key, debug_mode)
@@ -240,7 +267,7 @@ async def main() -> None:
 
             # Fetch jobs from API
             Actor.log.info("📥 Fetching jobs from Go API...")
-            api_response = await api_wrapper.fetch_jobs(max_jobs)
+            api_response = await api_wrapper.fetch_jobs(max_jobs, filters)
 
             jobs = api_response.get("data", [])
             total_jobs_available = len(jobs)
@@ -257,17 +284,17 @@ async def main() -> None:
 
             # Process jobs simply
             processed_count = await process_jobs_simple(
-                jobs, include_raw_data, debug_mode, max_jobs
+                jobs, debug_mode, max_jobs
             )
 
             # Add usage tracking - charge for actual jobs processed using pay-per-event
             try:
                 # Charge for initialization
-                await Actor.charge(event_name='api-result')
-                
+                ret = await Actor.charge(event_name='api-result', count=processed_count)
+                Actor.log.info(f"💰 [api-result] Tracked Usage: {ret}")
+
                 # Charge for each job processed (this is handled automatically by push_data with 'api-result' event_name)
-                Actor.log.info(f"💰 Usage tracked: {processed_count} jobs processed with 'api-result' pay-per-event charging")
-                
+                Actor.log.info(f"💰 [api-result] Tracked Usage: {processed_count} jobs processed with 'api-result' pay-per-event charging")
             except Exception as e:
                 Actor.log.warning(f"⚠️ Usage tracking failed: {e}")
                 # Continue execution even if charging fails

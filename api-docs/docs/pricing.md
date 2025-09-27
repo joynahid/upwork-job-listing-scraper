@@ -5,169 +5,91 @@ title: Pricing Plans
 
 # Pricing Plans
 
-Choose the perfect plan for your business needs. All plans include our premium job data, advanced filtering, and dedicated support.
+Choose the plan that matches your publishing cadence and automation needs. All tiers include secure authentication, full documentation, and email support.
 
-## 🆓 Starter Plan - **FREE**
+## Starter - Free
 
-Perfect for trying out our API and small-scale projects.
+Designed for experimentation, prototyping, and smaller side projects.
 
-**$0/month**
+**$0 / month**
 
-✅ **1,000 API calls per month**  
-✅ **Basic job data access**  
-✅ **Standard filtering options**  
-✅ **Email support**  
-✅ **API documentation**  
-✅ **7-day data retention**  
+- 1,000 API calls per month
+- Core job fields and buyer metadata
+- Standard filtering options
+- Email support within 24 hours
+- Seven-day data retention
 
-*No credit card required*
-
-[Start Free Trial](/docs/getting-started)
+[Start with Starter](/docs/getting-started)
 
 ---
 
-## 🚀 Professional Plan - **$99/month**
+## Professional - $99 / month
 
-Ideal for freelancers, small agencies, and growing businesses.
+Built for independent creators, newsletters, and boutique content studios shipping weekly updates.
 
-**$99/month** *(Save 20% with annual billing)*
+- 25,000 API calls per month (20% discount with annual billing)
+- Real-time updates with priority queueing
+- Advanced filtering and saved query support
+- Webhook delivery for n8n, Zapier, and Make integrations
+- 30-day rolling data retention
+- Priority email support (same-day response)
+- Custom rate limit pooling across projects
 
-✅ **25,000 API calls per month**  
-✅ **Full job data access**  
-✅ **Advanced filtering & search**  
-✅ **Real-time data updates**  
-✅ **30-day data retention**  
-✅ **Priority email support**  
-✅ **Webhook notifications**  
-✅ **Custom rate limits**  
-
-*Most popular choice*
-
-[Choose Professional](mailto:sales@upworkjobsapi.com?subject=Professional%20Plan%20Signup)
+[Upgrade to Professional](mailto:sales@upworkjobsapi.com?subject=Professional%20Plan%20Signup)
 
 ---
 
-## 💼 Business Plan - **$299/month**
+## Business - $299 / month
 
-Perfect for established agencies and businesses with higher volume needs.
+Ideal for agencies and media teams managing multiple publications or subscriber cohorts.
 
-**$299/month** *(Save 25% with annual billing)*
+- 100,000 API calls per month (25% discount with annual billing)
+- Premium buyer analytics and historical lookups (six months)
+- Dedicated Discord/Telegram delivery modules
+- SLA-backed uptime and webhook retries
+- Account manager with quarterly optimisation reviews
+- Custom data shaping and field remapping
+- White-label documentation for client handoffs
 
-✅ **100,000 API calls per month**  
-✅ **Premium job data access**  
-✅ **Advanced analytics endpoints**  
-✅ **Historical data access (6 months)**  
-✅ **Priority phone & email support**  
-✅ **Custom integrations support**  
-✅ **Dedicated account manager**  
-✅ **SLA guarantee (99.9% uptime)**  
-✅ **White-label options**  
-
-[Choose Business](mailto:sales@upworkjobsapi.com?subject=Business%20Plan%20Signup)
+[Talk to sales about Business](mailto:sales@upworkjobsapi.com?subject=Business%20Plan%20Signup)
 
 ---
 
-## 🏢 Enterprise Plan - **Custom Pricing**
+## Enterprise - Custom pricing
 
-Tailored solutions for large organizations with specific requirements.
+For platforms and networks that require bespoke infrastructure, compliance, or unlimited scale.
 
-**Contact us for pricing**
+- Unlimited API calls with pooled throughput
+- Custom deployment options (isolated environments or on-premise)
+- Full historical archive access and replay tooling
+- 24/7 technical support with dedicated Slack channel
+- Tailored onboarding workshops for cross-team adoption
+- Data residency and compliance guarantees (SOC 2, GDPR)
 
-✅ **Unlimited API calls**  
-✅ **Custom data processing**  
-✅ **Dedicated infrastructure**  
-✅ **Full historical data access**  
-✅ **24/7 phone support**  
-✅ **Custom SLA agreements**  
-✅ **On-premise deployment options**  
-✅ **Custom feature development**  
-✅ **Training & onboarding**  
-
-[Contact Sales](mailto:sales@upworkjobsapi.com?subject=Enterprise%20Plan%20Inquiry)
+[Contact sales](mailto:sales@upworkjobsapi.com?subject=Enterprise%20Plan%20Inquiry)
 
 ---
 
-## 💡 Add-Ons & Extras
+## Optional add-ons
 
-Enhance any plan with these optional features:
+| Add-on | Price | What it covers |
+|--------|-------|----------------|
+| Extended archive | $50 / month | Two-year rolling history for longitudinal analysis |
+| Real-time webhook retries | $25 / month | Automatic retries with exponential backoff |
+| Custom filter builders | $100 / month | Build and host advanced segmentation logic |
+| Bulk exports | $75 / month | Scheduled CSV/Parquet snapshots delivered to S3 or GCS |
+| Premium support | $150 / month | Two-hour response time, Slack channel, integration reviews |
 
-| Feature | Price | Description |
-|---------|-------|-------------|
-| **Extended History** | $50/month | Access to 2+ years of historical job data |
-| **Real-time Webhooks** | $25/month | Instant notifications for new jobs matching your criteria |
-| **Custom Filters** | $100/month | Build custom filtering logic for your specific needs |
-| **Data Export** | $75/month | Bulk data export capabilities (CSV, JSON) |
-| **Priority Support** | $150/month | Dedicated support channel with 2-hour response time |
+## Billing details
 
-## 🔄 Fair Usage & Overages
+- Monthly or annual billing (annual includes discounts noted above)
+- Accepted payment methods: credit card, ACH, wire (Enterprise)
+- Invoices include detailed usage summaries and overage reporting
+- Overage pricing: $0.01 per additional call on Professional and Business plans
+- Plan changes are prorated automatically
 
-- **Rate Limits**: Generous limits designed for real-world usage patterns
-- **Overage Pricing**: $0.01 per additional API call (Professional/Business plans)
-- **No Surprise Bills**: Set monthly spending caps to control costs
-- **Flexible Scaling**: Upgrade or downgrade anytime with prorated billing
+## Need help choosing?
 
-## 🛡️ What's Included in All Plans
+Email [sales@upworkjobsapi.com](mailto:sales@upworkjobsapi.com) to review your content pipeline, subscriber volume, and automation goals. We can recommend filters, onboarding plans, and integration patterns tailored to your workflow.
 
-### Data Quality Guarantee
-- Spam and duplicate filtering
-- Real-time data validation
-- 99.5% data accuracy guarantee
-
-### Security & Compliance
-- Enterprise-grade API security
-- SOC 2 Type II compliance
-- GDPR compliant data handling
-- Encrypted data transmission
-
-### Developer Experience
-- Comprehensive API documentation
-- SDKs for popular languages
-- Postman collections
-- Interactive API explorer
-
-## 💳 Payment & Billing
-
-- **Payment Methods**: Credit card, ACH, wire transfer (Enterprise)
-- **Billing Cycle**: Monthly or annual (with discounts)
-- **Currency**: USD (other currencies available for Enterprise)
-- **Invoicing**: Automatic billing with detailed usage reports
-
-## 🎯 Which Plan is Right for You?
-
-### Choose **Starter** if you:
-- Want to test our API capabilities
-- Have a small side project or personal use
-- Need basic job data for research
-
-### Choose **Professional** if you:
-- Run a freelance business or small agency
-- Need regular access to fresh job data
-- Want advanced filtering capabilities
-
-### Choose **Business** if you:
-- Manage multiple clients or large projects
-- Need historical data for analysis
-- Require dedicated support and SLA
-
-### Choose **Enterprise** if you:
-- Have complex integration requirements
-- Need custom features or on-premise deployment
-- Require dedicated infrastructure and support
-
-## 🚀 Start Your Free Trial
-
-No matter which plan you choose, start with our free trial to experience the quality of our data and the power of our API.
-
-[Start Free Trial - No Credit Card Required](/docs/getting-started)
-
-## 💬 Questions About Pricing?
-
-Our sales team is here to help you find the perfect plan for your needs.
-
-- **Email**: [sales@upworkjobsapi.com](mailto:sales@upworkjobsapi.com)
-- **Schedule a Call**: [Book a 15-minute consultation](mailto:sales@upworkjobsapi.com?subject=Pricing%20Consultation)
-- **Live Chat**: Available 9 AM - 6 PM EST
-
----
-
-*All prices in USD. Enterprise pricing varies based on requirements. Contact us for volume discounts and custom arrangements.*
+*All pricing listed in USD. Taxes may apply based on jurisdiction.*
