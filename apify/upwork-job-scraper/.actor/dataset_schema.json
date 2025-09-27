@@ -7,79 +7,50 @@
             "title": "Job ID",
             "type": "string",
             "description": "Unique identifier for the job posting",
-            "example": "~01234567890abcdef"
+            "example": "Virtual-Assistant-Needed-for-Research-Outreach-and-Organization_~021971791858643452240"
         },
         "title": {
             "title": "Job Title",
             "type": "string",
             "description": "The title of the job posting",
-            "example": "Python Developer for Web Scraping Project"
+            "example": "Virtual Assistant Needed for Research, Outreach, and Organization"
         },
         "description": {
             "title": "Job Description", 
             "type": "string",
             "description": "Full description of the job requirements and details",
-            "example": "We are looking for an experienced Python developer to build a web scraping solution..."
+            "example": "We are seeking an experienced virtual assistant to help with research, outreach, and organization tasks..."
         },
         "url": {
             "title": "Job URL",
             "type": "string",
             "description": "Direct link to the job posting on Upwork",
-            "example": "https://www.upwork.com/jobs/~01234567890abcdef",
+            "example": "https://www.upwork.com/jobs/Virtual-Assistant-Needed-for-Research-Outreach-and-Organization_~021971791858643452240/",
             "format": "uri"
         },
         "hourly_rate": {
             "title": "Hourly Rate",
-            "type": "object",
-            "description": "Hourly rate information for the job",
-            "properties": {
-                "min": {
-                    "title": "Minimum Rate",
-                    "type": "number",
-                    "description": "Minimum hourly rate in USD"
-                },
-                "max": {
-                    "title": "Maximum Rate", 
-                    "type": "number",
-                    "description": "Maximum hourly rate in USD"
-                },
-                "currency": {
-                    "title": "Currency",
-                    "type": "string",
-                    "description": "Currency code (usually USD)"
-                }
-            }
+            "type": "string",
+            "description": "Hourly rate range for the job",
+            "example": "$25.00 - $47.00/hr"
         },
         "budget": {
             "title": "Project Budget",
-            "type": "object", 
-            "description": "Fixed price budget information",
-            "properties": {
-                "amount": {
-                    "title": "Budget Amount",
-                    "type": "number",
-                    "description": "Fixed project budget amount"
-                },
-                "currency": {
-                    "title": "Currency",
-                    "type": "string",
-                    "description": "Currency code (usually USD)"
-                }
-            }
+            "type": "string", 
+            "description": "Fixed price budget for the project",
+            "example": "$400.00"
         },
         "experience_level": {
             "title": "Experience Level",
             "type": "string",
             "description": "Required experience level for the job",
-            "example": "Intermediate",
-            "enum": ["Entry Level", "Intermediate", "Expert"]
+            "example": "Intermediate"
         },
         "job_type": {
             "title": "Job Type",
             "type": "string", 
             "description": "Type of job posting",
-            "example": "Fixed Price",
-            "enum": ["Hourly", "Fixed Price"]
+            "example": "Fixed-price"
         },
         "skills": {
             "title": "Required Skills",
@@ -88,7 +59,7 @@
             "items": {
                 "type": "string"
             },
-            "example": ["Python", "Web Scraping", "BeautifulSoup", "Selenium"]
+            "example": ["Web Development", "Web Design", "PHP"]
         },
         "client_location": {
             "title": "Client Location",
@@ -96,19 +67,65 @@
             "description": "Geographic location of the client",
             "example": "United States"
         },
+        "client_company_size": {
+            "title": "Client Company Size",
+            "type": "string",
+            "description": "Size of the client's company",
+            "example": "Mid-sized company (10-99 people)"
+        },
+        "client_industry": {
+            "title": "Client Industry",
+            "type": "string",
+            "description": "Industry sector of the client",
+            "example": "Health & Fitness"
+        },
         "posted_date": {
             "title": "Posted Date",
             "type": "string",
-            "description": "When the job was posted",
-            "example": "2024-01-15T10:30:00Z",
-            "format": "date-time"
+            "description": "When the job was posted (relative time)",
+            "example": "Posted 11 minutes ago"
         },
         "proposals_count": {
             "title": "Number of Proposals",
-            "type": "integer",
+            "type": "string",
             "description": "Number of proposals submitted for this job",
-            "example": 15,
-            "minimum": 0
+            "example": "Less than 5"
+        },
+        "duration": {
+            "title": "Project Duration",
+            "type": "string",
+            "description": "Expected duration of the project",
+            "example": "1-3 months"
+        },
+        "project_type": {
+            "title": "Project Type",
+            "type": "string",
+            "description": "Type of project engagement",
+            "example": "One-time project"
+        },
+        "work_hours": {
+            "title": "Work Hours",
+            "type": "string",
+            "description": "Expected weekly work hours",
+            "example": "Less than 30 hrs/week"
+        },
+        "member_since": {
+            "title": "Client Member Since",
+            "type": "string",
+            "description": "When the client joined Upwork",
+            "example": "Oct 20, 2015"
+        },
+        "total_spent": {
+            "title": "Total Client Spending",
+            "type": "string",
+            "description": "Total amount the client has spent on Upwork",
+            "example": "$23K"
+        },
+        "total_hires": {
+            "title": "Total Hires",
+            "type": "string",
+            "description": "Total number of freelancers hired by the client",
+            "example": "59"
         },
         "last_visited_at": {
             "title": "Last Visited",
@@ -139,7 +156,9 @@
                     "job_type",
                     "client_location",
                     "proposals_count",
-                    "posted_date"
+                    "posted_date",
+                    "budget",
+                    "hourly_rate"
                 ]
             },
             "display": {
@@ -163,11 +182,19 @@
                     },
                     "proposals_count": {
                         "label": "Proposals",
-                        "format": "number"
+                        "format": "text"
                     },
                     "posted_date": {
                         "label": "Posted",
-                        "format": "datetime"
+                        "format": "text"
+                    },
+                    "budget": {
+                        "label": "Budget",
+                        "format": "text"
+                    },
+                    "hourly_rate": {
+                        "label": "Hourly Rate",
+                        "format": "text"
                     }
                 }
             }
@@ -184,8 +211,15 @@
                     "experience_level",
                     "job_type",
                     "client_location",
+                    "client_company_size",
+                    "client_industry",
                     "proposals_count",
                     "posted_date",
+                    "duration",
+                    "project_type",
+                    "work_hours",
+                    "total_spent",
+                    "total_hires",
                     "url"
                 ]
             },
@@ -199,19 +233,35 @@
                     "description": {
                         "label": "Description", 
                         "format": "text",
-                        "truncate": 100
+                        "truncate": 150
                     },
                     "hourly_rate": {
                         "label": "Hourly Rate",
-                        "format": "object"
+                        "format": "text"
                     },
                     "budget": {
                         "label": "Budget",
-                        "format": "object" 
+                        "format": "text" 
                     },
                     "skills": {
                         "label": "Skills",
                         "format": "array"
+                    },
+                    "client_company_size": {
+                        "label": "Company Size",
+                        "format": "text"
+                    },
+                    "client_industry": {
+                        "label": "Industry",
+                        "format": "text"
+                    },
+                    "total_spent": {
+                        "label": "Client Spent",
+                        "format": "text"
+                    },
+                    "total_hires": {
+                        "label": "Total Hires",
+                        "format": "text"
                     },
                     "url": {
                         "label": "Job Link",
