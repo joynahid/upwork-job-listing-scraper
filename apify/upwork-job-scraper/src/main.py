@@ -243,7 +243,7 @@ async def main() -> None:
 
             # Add usage tracking - charge for actual jobs processed
             usage_count = min(max_jobs, len(jobs))
-            await Actor.add_usage("api-result", usage_count)
+            await Actor.add_usage("api-result", usage_count * 0.001)
             Actor.log.info(f"💰 Usage tracked: {usage_count} jobs (Charged for {len(jobs)} jobs processed)")
 
             # Store run summary
