@@ -8,7 +8,7 @@ import os
 import random
 from datetime import datetime
 from typing import Any
-
+from botasaurus_driver.exceptions import CloudflareDetectionException
 from botasaurus_driver import Driver
 from ..realtimedb import JobData, RealtimeJobDatabase
 
@@ -118,6 +118,9 @@ class UpworkJobService:
             except asyncio.CancelledError:
                 logger.info("Scraping cancelled during URL processing")
                 raise  # Re-raise to properly propagate cancellation
+            except CloudflareDetectionException:
+                logger.warning("Cloudflare detection exception - skipping URL %s", url)
+                raise
             except Exception as exc:
                 logger.error("Failed to process search URL %s: %s", url, exc, exc_info=True)
 
