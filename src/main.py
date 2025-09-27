@@ -15,6 +15,7 @@ from pathlib import Path
 from .core.service import UpworkJobService
 from .realtimedb import RealtimeJobDatabase
 from .schemas.input import ActorInput
+from botasaurus_driver.exceptions import CloudflareDetectionException
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -182,6 +183,8 @@ async def main() -> None:
                 f"Completed successfully - {total_jobs} comprehensive jobs processed"
             )
 
+        except CloudflareDetectionException:
+            logger.error("Cloudflare detection exception")
         except KeyboardInterrupt:
             logger.info("Scraper interrupted by user")
             raise
