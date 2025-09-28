@@ -82,8 +82,8 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "Filter by job type",
+                        "type": "string",
+                        "description": "Filter by job type (hourly|fixed-price or numeric code)",
                         "name": "job_type",
                         "in": "query"
                     },
@@ -199,20 +199,20 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "Filter by job status",
+                        "type": "string",
+                        "description": "Filter by job status (open|closed or numeric code)",
                         "name": "status",
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "Filter by job type",
+                        "type": "string",
+                        "description": "Filter by job type (hourly|fixed-price or numeric code)",
                         "name": "job_type",
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "Filter by contractor tier",
+                        "type": "string",
+                        "description": "Filter by contractor tier (entry|intermediate|expert or numeric code)",
                         "name": "contractor_tier",
                         "in": "query"
                     },

@@ -6,116 +6,204 @@
         "maxJobs": {
             "title": "Maximum Jobs",
             "type": "integer",
-            "description": "Maximum number of jobs to fetch and process (1-50)",
+            "description": "Number of jobs to fetch per run (1-50)",
             "minimum": 1,
             "maximum": 50,
             "default": 20,
             "editor": "number"
         },
+        "offset": {
+            "title": "Pagination Offset",
+            "type": "integer",
+            "description": "Skip this many matching jobs before returning results. Must be a multiple of the limit (maxJobs).",
+            "minimum": 0,
+            "multipleOf": 1,
+            "default": 0,
+            "editor": "number"
+        },
         "paymentVerified": {
             "title": "Payment Verified Only",
             "type": "boolean",
-            "description": "Return only clients with a verified payment method",
+            "description": "Require clients to have a verified payment method.",
             "default": false
-        },
-        "category": {
-            "title": "Category Slug",
-            "type": "string",
-            "description": "Filter by Upwork specialty category slug (e.g. web-mobile-software-dev)",
-            "editor": "textfield"
-        },
-        "categoryGroup": {
-            "title": "Category Group Slug",
-            "type": "string",
-            "description": "Filter by Upwork category group slug (e.g. dev-it)",
-            "editor": "textfield"
         },
         "status": {
             "title": "Job Status",
             "type": "string",
-            "description": "Filter by job status",
-            "enum": [
-                "",
-                "open",
-                "closed"
-            ],
+            "description": "Select job status or leave blank for any.",
+            "enum": ["", "open", "closed"],
+            "enumTitles": ["Any status", "Open", "Closed"],
             "editor": "select",
             "default": ""
         },
         "jobType": {
             "title": "Job Type",
             "type": "string",
-            "description": "Contract type for the engagement",
-            "enum": [
-                "",
-                "hourly",
-                "fixed-price"
-            ],
+            "description": "Contract type for the engagement.",
+            "enum": ["", "hourly", "fixed-price"],
+            "enumTitles": ["Any type", "Hourly", "Fixed price"],
             "editor": "select",
             "default": ""
         },
         "contractorTier": {
-            "title": "Contractor Tier",
+            "title": "Experience Level",
             "type": "string",
-            "description": "Requested experience level",
-            "enum": [
-                "",
-                "entry",
-                "intermediate",
-                "expert"
-            ],
+            "description": "Requested contractor experience tier.",
+            "enum": ["", "entry", "intermediate", "expert"],
+            "enumTitles": ["Any level", "Entry", "Intermediate", "Expert"],
             "editor": "select",
             "default": ""
+        },
+        "category": {
+            "title": "Category Slug",
+            "type": "string",
+            "description": "Filter by Upwork specialty category slug (e.g. web-mobile-software-dev).",
+            "editor": "textfield"
+        },
+        "categoryGroup": {
+            "title": "Category Group Slug",
+            "type": "string",
+            "description": "Filter by Upwork category group slug (e.g. dev-it).",
+            "editor": "textfield"
         },
         "country": {
             "title": "Client Country",
             "type": "string",
-            "description": "Two-letter ISO country code (e.g. US, GB, CA, AU)",
-            "editor": "textfield"
+            "description": "Filter by buyer country (ISO-3166 alpha-2). Leave blank for any.",
+            "enum": ["", "AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR", "AM", "AW", "AU", "AT", "AZ", "BS", "BH", "BD", "BB", "BY", "BE", "BZ", "BJ", "BM", "BT", "BO", "BA", "BW", "BV", "BR", "IO", "VG", "BN", "BG", "BF", "BI", "KH", "CM", "CA", "CV", "BQ", "KY", "CF", "TD", "CL", "CN", "CX", "CC", "CO", "KM", "CK", "CR", "HR", "CU", "CW", "CY", "CZ", "CD", "DK", "DJ", "DM", "DO", "EC", "EG", "SV", "GQ", "ER", "EE", "SZ", "ET", "FK", "FO", "FJ", "FI", "FR", "GF", "PF", "TF", "GA", "GM", "GE", "DE", "GH", "GI", "GR", "GL", "GD", "GP", "GU", "GT", "GG", "GN", "GW", "GY", "HT", "HM", "HN", "HK", "HU", "IS", "IN", "ID", "IR", "IQ", "IE", "IM", "IL", "IT", "CI", "JM", "JP", "JE", "JO", "KZ", "KE", "KI", "XK", "KW", "KG", "LA", "LV", "LB", "LS", "LR", "LY", "LI", "LT", "LU", "MO", "MG", "MW", "MY", "MV", "ML", "MT", "MH", "MQ", "MR", "MU", "YT", "MX", "FM", "MD", "MC", "MN", "ME", "MS", "MA", "MZ", "MM", "NA", "NR", "NP", "NL", "NC", "NZ", "NI", "NE", "NG", "NU", "NF", "KP", "MK", "MP", "NO", "OM", "PK", "PW", "PS", "PA", "PG", "PY", "PE", "PH", "PN", "PL", "PT", "PR", "QA", "CG", "RE", "RO", "RU", "RW", "BL", "SH", "KN", "LC", "MF", "PM", "VC", "WS", "SM", "ST", "SA", "SN", "RS", "SC", "SL", "SG", "SX", "SK", "SI", "SB", "SO", "ZA", "GS", "KR", "SS", "ES", "LK", "SD", "SR", "SJ", "SE", "CH", "SY", "TW", "TJ", "TZ", "TH", "TL", "TG", "TK", "TO", "TT", "TN", "TR", "TM", "TC", "TV", "UM", "UG", "UA", "AE", "GB", "US", "VI", "UY", "UZ", "VU", "VA", "VE", "VN", "WF", "EH", "YE", "ZM", "ZW"],
+            "enumTitles": ["Any country", "Afghanistan (AF)", "Aland Islands (AX)", "Albania (AL)", "Algeria (DZ)", "American Samoa (AS)", "Andorra (AD)", "Angola (AO)", "Anguilla (AI)", "Antarctica (AQ)", "Antigua and Barbuda (AG)", "Argentina (AR)", "Armenia (AM)", "Aruba (AW)", "Australia (AU)", "Austria (AT)", "Azerbaijan (AZ)", "Bahamas (BS)", "Bahrain (BH)", "Bangladesh (BD)", "Barbados (BB)", "Belarus (BY)", "Belgium (BE)", "Belize (BZ)", "Benin (BJ)", "Bermuda (BM)", "Bhutan (BT)", "Bolivia (BO)", "Bosnia and Herzegovina (BA)", "Botswana (BW)", "Bouvet Island (BV)", "Brazil (BR)", "British Indian Ocean Territory (IO)", "British Virgin Islands (VG)", "Brunei (BN)", "Bulgaria (BG)", "Burkina Faso (BF)", "Burundi (BI)", "Cambodia (KH)", "Cameroon (CM)", "Canada (CA)", "Cape Verde (CV)", "Caribbean Netherlands (BQ)", "Cayman Islands (KY)", "Central African Republic (CF)", "Chad (TD)", "Chile (CL)", "China (CN)", "Christmas Island (CX)", "Cocos (Keeling) Islands (CC)", "Colombia (CO)", "Comoros (KM)", "Cook Islands (CK)", "Costa Rica (CR)", "Croatia (HR)", "Cuba (CU)", "Curacao (CW)", "Cyprus (CY)", "Czech Republic (CZ)", "Democratic Republic of the Congo (CD)", "Denmark (DK)", "Djibouti (DJ)", "Dominica (DM)", "Dominican Republic (DO)", "Ecuador (EC)", "Egypt (EG)", "El Salvador (SV)", "Equatorial Guinea (GQ)", "Eritrea (ER)", "Estonia (EE)", "Eswatini (SZ)", "Ethiopia (ET)", "Falkland Islands (FK)", "Faroe Islands (FO)", "Fiji (FJ)", "Finland (FI)", "France (FR)", "French Guiana (GF)", "French Polynesia (PF)", "French Southern Territories (TF)", "Gabon (GA)", "Gambia (GM)", "Georgia (GE)", "Germany (DE)", "Ghana (GH)", "Gibraltar (GI)", "Greece (GR)", "Greenland (GL)", "Grenada (GD)", "Guadeloupe (GP)", "Guam (GU)", "Guatemala (GT)", "Guernsey (GG)", "Guinea (GN)", "Guinea-Bissau (GW)", "Guyana (GY)", "Haiti (HT)", "Heard Island and McDonald Islands (HM)", "Honduras (HN)", "Hong Kong (HK)", "Hungary (HU)", "Iceland (IS)", "India (IN)", "Indonesia (ID)", "Iran (IR)", "Iraq (IQ)", "Ireland (IE)", "Isle of Man (IM)", "Israel (IL)", "Italy (IT)", "Cote d'Ivoire (CI)", "Jamaica (JM)", "Japan (JP)", "Jersey (JE)", "Jordan (JO)", "Kazakhstan (KZ)", "Kenya (KE)", "Kiribati (KI)", "Kosovo (XK)", "Kuwait (KW)", "Kyrgyzstan (KG)", "Laos (LA)", "Latvia (LV)", "Lebanon (LB)", "Lesotho (LS)", "Liberia (LR)", "Libya (LY)", "Liechtenstein (LI)", "Lithuania (LT)", "Luxembourg (LU)", "Macau (MO)", "Madagascar (MG)", "Malawi (MW)", "Malaysia (MY)", "Maldives (MV)", "Mali (ML)", "Malta (MT)", "Marshall Islands (MH)", "Martinique (MQ)", "Mauritania (MR)", "Mauritius (MU)", "Mayotte (YT)", "Mexico (MX)", "Micronesia (FM)", "Moldova (MD)", "Monaco (MC)", "Mongolia (MN)", "Montenegro (ME)", "Montserrat (MS)", "Morocco (MA)", "Mozambique (MZ)", "Myanmar (MM)", "Namibia (NA)", "Nauru (NR)", "Nepal (NP)", "Netherlands (NL)", "New Caledonia (NC)", "New Zealand (NZ)", "Nicaragua (NI)", "Niger (NE)", "Nigeria (NG)", "Niue (NU)", "Norfolk Island (NF)", "North Korea (KP)", "North Macedonia (MK)", "Northern Mariana Islands (MP)", "Norway (NO)", "Oman (OM)", "Pakistan (PK)", "Palau (PW)", "Palestine (PS)", "Panama (PA)", "Papua New Guinea (PG)", "Paraguay (PY)", "Peru (PE)", "Philippines (PH)", "Pitcairn Islands (PN)", "Poland (PL)", "Portugal (PT)", "Puerto Rico (PR)", "Qatar (QA)", "Republic of the Congo (CG)", "Reunion (RE)", "Romania (RO)", "Russia (RU)", "Rwanda (RW)", "Saint Barthelemy (BL)", "Saint Helena, Ascension and Tristan da Cunha (SH)", "Saint Kitts and Nevis (KN)", "Saint Lucia (LC)", "Saint Martin (MF)", "Saint Pierre and Miquelon (PM)", "Saint Vincent and the Grenadines (VC)", "Samoa (WS)", "San Marino (SM)", "Sao Tome and Principe (ST)", "Saudi Arabia (SA)", "Senegal (SN)", "Serbia (RS)", "Seychelles (SC)", "Sierra Leone (SL)", "Singapore (SG)", "Sint Maarten (SX)", "Slovakia (SK)", "Slovenia (SI)", "Solomon Islands (SB)", "Somalia (SO)", "South Africa (ZA)", "South Georgia (GS)", "South Korea (KR)", "South Sudan (SS)", "Spain (ES)", "Sri Lanka (LK)", "Sudan (SD)", "Suriname (SR)", "Svalbard and Jan Mayen (SJ)", "Sweden (SE)", "Switzerland (CH)", "Syria (SY)", "Taiwan (TW)", "Tajikistan (TJ)", "Tanzania (TZ)", "Thailand (TH)", "Timor-Leste (TL)", "Togo (TG)", "Tokelau (TK)", "Tonga (TO)", "Trinidad and Tobago (TT)", "Tunisia (TN)", "Turkey (TR)", "Turkmenistan (TM)", "Turks and Caicos Islands (TC)", "Tuvalu (TV)", "US Minor Outlying Islands (UM)", "Uganda (UG)", "Ukraine (UA)", "United Arab Emirates (AE)", "United Kingdom (GB)", "United States (US)", "United States Virgin Islands (VI)", "Uruguay (UY)", "Uzbekistan (UZ)", "Vanuatu (VU)", "Vatican City (VA)", "Venezuela (VE)", "Vietnam (VN)", "Wallis and Futuna (WF)", "Western Sahara (EH)", "Yemen (YE)", "Zambia (ZM)", "Zimbabwe (ZW)"],
+            "editor": "select"
         },
         "tags": {
             "title": "Required Tags",
             "type": "string",
-            "description": "Comma-separated list of tags that must be present on the job (e.g. React, Node.js, Python)",
+            "description": "Comma-separated tags that must appear on the job (matches any of the values).",
+            "editor": "textfield"
+        },
+        "skills": {
+            "title": "Must-Have Skills",
+            "type": "string",
+            "description": "Comma-separated skills to match against the job skills list (matches any).",
             "editor": "textfield"
         },
         "postedAfter": {
             "title": "Posted After",
             "type": "string",
-            "description": "Only include jobs posted after this date (ISO format: 2024-04-01T00:00:00Z)",
-            "editor": "textfield"
+            "description": "Only include jobs posted after this timestamp.",
+            "format": "date-time",
+            "editor": "datetime"
         },
         "postedBefore": {
             "title": "Posted Before",
             "type": "string",
-            "description": "Only include jobs posted before this date (ISO format: 2024-04-01T00:00:00Z)",
-            "editor": "textfield"
+            "description": "Only include jobs posted before this timestamp.",
+            "format": "date-time",
+            "editor": "datetime"
+        },
+        "lastVisitedAfter": {
+            "title": "Client Activity After",
+            "type": "string",
+            "description": "Return jobs where the buyer was last active after this timestamp.",
+            "format": "date-time",
+            "editor": "datetime"
         },
         "budgetMin": {
             "title": "Minimum Fixed Budget",
-            "type": "string",
-            "description": "Filter jobs with a fixed budget greater than or equal to this amount (e.g. 1000)",
-            "editor": "textfield"
+            "type": "number",
+            "description": "Filter fixed-price jobs with budget greater than or equal to this amount.",
+            "minimum": 0,
+            "editor": "number"
         },
         "budgetMax": {
-            "title": "Maximum Fixed Budget", 
+            "title": "Maximum Fixed Budget",
+            "type": "number",
+            "description": "Filter fixed-price jobs with budget less than or equal to this amount.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "hourlyMin": {
+            "title": "Minimum Hourly Rate",
+            "type": "number",
+            "description": "Filter hourly jobs whose rate range starts at or above this amount.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "hourlyMax": {
+            "title": "Maximum Hourly Rate",
+            "type": "number",
+            "description": "Filter hourly jobs whose rate range is at or below this amount.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "durationLabel": {
+            "title": "Duration Label",
             "type": "string",
-            "description": "Filter jobs with a fixed budget less than or equal to this amount (e.g. 5000)",
+            "description": "Match the duration label (e.g. ongoing, less than 1 month).",
             "editor": "textfield"
+        },
+        "engagement": {
+            "title": "Engagement Type",
+            "type": "string",
+            "description": "Filter by engagement text such as part-time or full-time.",
+            "editor": "textfield"
+        },
+        "buyerTotalSpentMin": {
+            "title": "Buyer Spent (Min)",
+            "type": "number",
+            "description": "Require the buyer to have spent at least this amount in USD historically.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalSpentMax": {
+            "title": "Buyer Spent (Max)",
+            "type": "number",
+            "description": "Require the buyer to have spent at most this amount in USD historically.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalAssignmentsMin": {
+            "title": "Buyer Assignments (Min)",
+            "type": "integer",
+            "description": "Minimum number of assignments completed by the buyer.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalAssignmentsMax": {
+            "title": "Buyer Assignments (Max)",
+            "type": "integer",
+            "description": "Maximum number of assignments completed by the buyer.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalJobsWithHiresMin": {
+            "title": "Buyer Hires (Min)",
+            "type": "integer",
+            "description": "Minimum number of jobs where the buyer made a hire.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalJobsWithHiresMax": {
+            "title": "Buyer Hires (Max)",
+            "type": "integer",
+            "description": "Maximum number of jobs where the buyer made a hire.",
+            "minimum": 0,
+            "editor": "number"
         },
         "sort": {
             "title": "Sort Order",
             "type": "string",
-            "description": "Sort results by posted date or last visited timestamp",
-            "enum": [
-                "",
-                "last_visited_desc",
-                "last_visited_asc", 
-                "posted_on_desc",
-                "posted_on_asc"
+            "description": "Choose how results are ordered.",
+            "enum": ["last_visited_desc", "last_visited_asc", "posted_on_desc", "posted_on_asc", "budget_desc", "budget_asc"],
+            "enumTitles": [
+                "Last visited (newest first)",
+                "Last visited (oldest first)",
+                "Posted date (newest first)",
+                "Posted date (oldest first)",
+                "Budget (highest first)",
+                "Budget (lowest first)"
             ],
             "editor": "select",
-            "default": ""
+            "default": "last_visited_desc"
         }
     },
     "required": []

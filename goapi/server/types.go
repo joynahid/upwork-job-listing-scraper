@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -10,6 +11,56 @@ type sortField string
 const (
 	SortLastVisited sortField = "last_visited"
 	SortPostedOn    sortField = "posted_on"
+	SortBudget      sortField = "budget"
+)
+
+var enumKeyReplacer = strings.NewReplacer("-", "", "_", "", " ", "")
+
+var (
+	jobTypeLabelByCode = map[int]string{
+		1: "hourly",
+		2: "fixed-price",
+	}
+	jobTypeCanonicalLabels = []string{"hourly", "fixed-price"}
+	jobTypeCodeByKey       = map[string]int{
+		canonicalEnumKey("hourly"):      1,
+		canonicalEnumKey("hourly-job"):  1,
+		canonicalEnumKey("fixed-price"): 2,
+		canonicalEnumKey("fixed price"): 2,
+		canonicalEnumKey("fixed"):       2,
+	}
+
+	jobStatusLabelByCode = map[int]string{
+		1: "open",
+		2: "closed",
+	}
+	jobStatusCanonicalLabels = []string{"open", "closed"}
+	jobStatusCodeByKey       = map[string]int{
+		canonicalEnumKey("open"):     1,
+		canonicalEnumKey("opened"):   1,
+		canonicalEnumKey("active"):   1,
+		canonicalEnumKey("closed"):   2,
+		canonicalEnumKey("inactive"): 2,
+		canonicalEnumKey("archived"): 2,
+	}
+
+	contractorTierLabelByCode = map[int]string{
+		1: "entry",
+		2: "intermediate",
+		3: "expert",
+	}
+	contractorTierCanonicalLabels = []string{"entry", "intermediate", "expert"}
+	contractorTierCodeByKey       = map[string]int{
+		canonicalEnumKey("entry"):        1,
+		canonicalEnumKey("entry-level"):  1,
+		canonicalEnumKey("beginner"):     1,
+		canonicalEnumKey("intermediate"): 2,
+		canonicalEnumKey("mid"):          2,
+		canonicalEnumKey("mid-level"):    2,
+		canonicalEnumKey("expert"):       3,
+		canonicalEnumKey("expert-level"): 3,
+		canonicalEnumKey("advanced"):     3,
+	}
 )
 
 // JobRecord represents normalized job data prior to serialization.
@@ -265,19 +316,76 @@ func relativeLabel(value int, unit string) string {
 	return fmt.Sprintf("%d %ss ago", value, unit)
 }
 
+func canonicalEnumKey(value string) string {
+	if value == "" {
+		return ""
+	}
+	return enumKeyReplacer.Replace(strings.ToLower(strings.TrimSpace(value)))
+}
+
+func jobTypeLabelFromCode(code int) string {
+	if label, ok := jobTypeLabelByCode[code]; ok {
+		return label
+	}
+	return "unknown"
+}
+
+func jobTypeCodeFromLabel(label string) (int, bool) {
+	if label == "" {
+		return 0, false
+	}
+	code, ok := jobTypeCodeByKey[canonicalEnumKey(label)]
+	return code, ok
+}
+
+func jobTypeAcceptedLabels() []string {
+	return append([]string(nil), jobTypeCanonicalLabels...)
+}
+
+func jobStatusLabelFromCode(code int) string {
+	if label, ok := jobStatusLabelByCode[code]; ok {
+		return label
+	}
+	return "unknown"
+}
+
+func jobStatusCodeFromLabel(label string) (int, bool) {
+	if label == "" {
+		return 0, false
+	}
+	code, ok := jobStatusCodeByKey[canonicalEnumKey(label)]
+	return code, ok
+}
+
+func jobStatusAcceptedLabels() []string {
+	return append([]string(nil), jobStatusCanonicalLabels...)
+}
+
+func contractorTierLabelFromCode(code int) string {
+	if label, ok := contractorTierLabelByCode[code]; ok {
+		return label
+	}
+	return "unknown"
+}
+
+func contractorTierCodeFromLabel(label string) (int, bool) {
+	if label == "" {
+		return 0, false
+	}
+	code, ok := contractorTierCodeByKey[canonicalEnumKey(label)]
+	return code, ok
+}
+
+func contractorTierAcceptedLabels() []string {
+	return append([]string(nil), contractorTierCanonicalLabels...)
+}
+
 func normalizeJobType(code *int) string {
 	if code == nil {
 		return ""
 	}
 
-	switch *code {
-	case 1:
-		return "hourly"
-	case 2:
-		return "fixed-price"
-	default:
-		return "unknown"
-	}
+	return jobTypeLabelFromCode(*code)
 }
 
 func normalizeJobStatus(code *int) string {
@@ -285,14 +393,7 @@ func normalizeJobStatus(code *int) string {
 		return ""
 	}
 
-	switch *code {
-	case 1:
-		return "open"
-	case 2:
-		return "closed"
-	default:
-		return "unknown"
-	}
+	return jobStatusLabelFromCode(*code)
 }
 
 func normalizeContractorTier(code *int) string {
@@ -300,16 +401,7 @@ func normalizeContractorTier(code *int) string {
 		return ""
 	}
 
-	switch *code {
-	case 1:
-		return "entry"
-	case 2:
-		return "intermediate"
-	case 3:
-		return "expert"
-	default:
-		return "unknown"
-	}
+	return contractorTierLabelFromCode(*code)
 }
 
 // ToDTO converts a JobSummaryRecord into response form.

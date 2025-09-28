@@ -234,10 +234,10 @@ paths:
         in: query
         name: skills
         type: string
-      - description: Filter by job type
+      - description: Filter by job type (hourly|fixed-price or numeric code)
         in: query
         name: job_type
-        type: integer
+        type: string
       - description: Filter by duration label
         in: query
         name: duration
@@ -311,18 +311,18 @@ paths:
         in: query
         name: category_group
         type: string
-      - description: Filter by job status
+      - description: Filter by job status (open|closed or numeric code)
         in: query
         name: status
-        type: integer
-      - description: Filter by job type
+        type: string
+      - description: Filter by job type (hourly|fixed-price or numeric code)
         in: query
         name: job_type
-        type: integer
-      - description: Filter by contractor tier
+        type: string
+      - description: Filter by contractor tier (entry|intermediate|expert or numeric code)
         in: query
         name: contractor_tier
-        type: integer
+        type: string
       - description: Filter by buyer country
         in: query
         name: country

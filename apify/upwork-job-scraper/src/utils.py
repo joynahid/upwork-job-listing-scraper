@@ -19,21 +19,49 @@ class ParameterParser:
         # Build filters from query parameters
         filters = {}
         filter_fields = [
-            "paymentVerified", "category", "categoryGroup", "status", 
-            "jobType", "contractorTier", "country", "tags", 
-            "postedAfter", "postedBefore", "budgetMin", "budgetMax", "sort"
+            "offset",
+            "paymentVerified",
+            "category",
+            "categoryGroup",
+            "status",
+            "jobType",
+            "contractorTier",
+            "country",
+            "tags",
+            "skills",
+            "postedAfter",
+            "postedBefore",
+            "lastVisitedAfter",
+            "budgetMin",
+            "budgetMax",
+            "hourlyMin",
+            "hourlyMax",
+            "durationLabel",
+            "engagement",
+            "buyerTotalSpentMin",
+            "buyerTotalSpentMax",
+            "buyerTotalAssignmentsMin",
+            "buyerTotalAssignmentsMax",
+            "buyerTotalJobsWithHiresMin",
+            "buyerTotalJobsWithHiresMax",
+            "sort",
         ]
         
         for field in filter_fields:
             if field in query_params:
                 value = query_params[field][0]
                 if value and value != "":
-                    if field == "tags":
-                        # Convert comma-separated string to list for tags
-                        filters[field] = [tag.strip() for tag in value.split(",") if tag.strip()]
+                    if field in {"tags", "skills"}:
+                        # Convert comma-separated string to list for tags or skills
+                        filters[field] = [token.strip() for token in value.split(",") if token.strip()]
+                    elif field == "offset":
+                        try:
+                            filters[field] = int(value)
+                        except ValueError:
+                            continue
                     else:
                         filters[field] = value
-        
+
         return {
             "max_jobs": max_jobs,
             "debug_mode": debug_mode,

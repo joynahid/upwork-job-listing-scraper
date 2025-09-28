@@ -1,7 +1,7 @@
 """Configuration management for the Upwork Job Scraper Actor."""
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from apify import Actor
 
@@ -28,19 +28,60 @@ class ActorConfig:
         """Build filters object from actor input fields."""
         filters = {}
         filter_fields = [
-            "paymentVerified", "category", "categoryGroup", "status", 
-            "jobType", "contractorTier", "country", "tags", 
-            "postedAfter", "postedBefore", "budgetMin", "budgetMax", "sort"
+            "offset",
+            "paymentVerified",
+            "category",
+            "categoryGroup",
+            "status",
+            "jobType",
+            "contractorTier",
+            "country",
+            "tags",
+            "skills",
+            "postedAfter",
+            "postedBefore",
+            "lastVisitedAfter",
+            "budgetMin",
+            "budgetMax",
+            "hourlyMin",
+            "hourlyMax",
+            "durationLabel",
+            "engagement",
+            "buyerTotalSpentMin",
+            "buyerTotalSpentMax",
+            "buyerTotalAssignmentsMin",
+            "buyerTotalAssignmentsMax",
+            "buyerTotalJobsWithHiresMin",
+            "buyerTotalJobsWithHiresMax",
+            "sort",
         ]
         
         for field in filter_fields:
             value = self.actor_input.get(field)
-            if value is not None and value != "":
-                if field == "tags" and isinstance(value, str):
-                    # Convert comma-separated string to list for tags
-                    filters[field] = [tag.strip() for tag in value.split(",") if tag.strip()]
-                else:
-                    filters[field] = value
+            if value is None:
+                continue
+
+            if isinstance(value, str) and value.strip() == "":
+                continue
+
+            if field == "offset" and isinstance(value, int) and value <= 0:
+                continue
+
+            if field in {"tags", "skills"}:
+                tokens: List[str] = []
+                if isinstance(value, str):
+                    tokens = [token.strip() for token in value.split(",") if token.strip()]
+                elif isinstance(value, list):
+                    tokens = [str(token).strip() for token in value if str(token).strip()]
+                if tokens:
+                    filters[field] = tokens
+                continue
+
+            if field == "country" and isinstance(value, str):
+                filters[field] = value.upper()
+                continue
+
+            filters[field] = value
         
         return filters
     

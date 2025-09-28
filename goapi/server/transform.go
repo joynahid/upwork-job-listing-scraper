@@ -692,6 +692,18 @@ func applyFilters(job *JobRecord, opts FilterOptions) bool {
 		}
 	}
 
+	if opts.DurationLabel != "" {
+		if strings.TrimSpace(job.DurationLabel) == "" || !strings.EqualFold(job.DurationLabel, opts.DurationLabel) {
+			return false
+		}
+	}
+
+	if opts.Engagement != "" {
+		if strings.TrimSpace(job.Engagement) == "" || !strings.EqualFold(job.Engagement, opts.Engagement) {
+			return false
+		}
+	}
+
 	if opts.BudgetMin != nil {
 		if job.Budget == nil || job.Budget.FixedAmount == nil || *job.Budget.FixedAmount < *opts.BudgetMin {
 			return false
@@ -700,6 +712,32 @@ func applyFilters(job *JobRecord, opts FilterOptions) bool {
 
 	if opts.BudgetMax != nil {
 		if job.Budget == nil || job.Budget.FixedAmount == nil || *job.Budget.FixedAmount > *opts.BudgetMax {
+			return false
+		}
+	}
+
+	if opts.HourlyMin != nil {
+		if job.HourlyInfo == nil {
+			return false
+		}
+		candidate := job.HourlyInfo.Min
+		if candidate == nil {
+			candidate = job.HourlyInfo.Max
+		}
+		if candidate == nil || *candidate < *opts.HourlyMin {
+			return false
+		}
+	}
+
+	if opts.HourlyMax != nil {
+		if job.HourlyInfo == nil {
+			return false
+		}
+		candidate := job.HourlyInfo.Max
+		if candidate == nil {
+			candidate = job.HourlyInfo.Min
+		}
+		if candidate == nil || *candidate > *opts.HourlyMax {
 			return false
 		}
 	}
@@ -716,18 +754,68 @@ func applyFilters(job *JobRecord, opts FilterOptions) bool {
 		}
 	}
 
-	if len(opts.Tags) > 0 {
-		if len(job.Tags) == 0 {
+	if opts.LastVisitedAfter != nil {
+		if job.LastVisitedAt == nil || job.LastVisitedAt.Before(*opts.LastVisitedAfter) {
 			return false
 		}
-		tagSet := make(map[string]struct{}, len(job.Tags))
-		for _, tag := range job.Tags {
-			tagSet[strings.ToLower(tag)] = struct{}{}
+	}
+
+	if len(opts.Tags) > 0 {
+		if len(job.Tags) == 0 && len(job.Skills) == 0 {
+			return false
 		}
+		keywordSet := make(map[string]struct{}, len(job.Tags)+len(job.Skills))
+		for _, tag := range job.Tags {
+			keywordSet[strings.ToLower(tag)] = struct{}{}
+		}
+		for _, skill := range job.Skills {
+			keywordSet[strings.ToLower(skill)] = struct{}{}
+		}
+		matched := false
 		for _, desired := range opts.Tags {
-			if _, ok := tagSet[strings.ToLower(desired)]; !ok {
-				return false
+			if _, ok := keywordSet[strings.ToLower(desired)]; ok {
+				matched = true
+				break
 			}
+		}
+		if !matched {
+			return false
+		}
+	}
+
+	if opts.BuyerTotalSpentMin != nil {
+		if job.Buyer == nil || job.Buyer.TotalSpent == nil || *job.Buyer.TotalSpent < *opts.BuyerTotalSpentMin {
+			return false
+		}
+	}
+
+	if opts.BuyerTotalSpentMax != nil {
+		if job.Buyer == nil || job.Buyer.TotalSpent == nil || *job.Buyer.TotalSpent > *opts.BuyerTotalSpentMax {
+			return false
+		}
+	}
+
+	if opts.BuyerTotalAssignmentsMin != nil {
+		if job.Buyer == nil || job.Buyer.TotalAssignments == nil || *job.Buyer.TotalAssignments < *opts.BuyerTotalAssignmentsMin {
+			return false
+		}
+	}
+
+	if opts.BuyerTotalAssignmentsMax != nil {
+		if job.Buyer == nil || job.Buyer.TotalAssignments == nil || *job.Buyer.TotalAssignments > *opts.BuyerTotalAssignmentsMax {
+			return false
+		}
+	}
+
+	if opts.BuyerTotalJobsWithHiresMin != nil {
+		if job.Buyer == nil || job.Buyer.TotalJobsWithHires == nil || *job.Buyer.TotalJobsWithHires < *opts.BuyerTotalJobsWithHiresMin {
+			return false
+		}
+	}
+
+	if opts.BuyerTotalJobsWithHiresMax != nil {
+		if job.Buyer == nil || job.Buyer.TotalJobsWithHires == nil || *job.Buyer.TotalJobsWithHires > *opts.BuyerTotalJobsWithHiresMax {
+			return false
 		}
 	}
 
@@ -766,6 +854,25 @@ func sortJobs(jobs []JobRecord, opts FilterOptions) {
 				return true
 			}
 			return aTime.After(bTime)
+		case SortBudget:
+			aValue, aOK := budgetMetric(a)
+			bValue, bOK := budgetMetric(b)
+			if !aOK && !bOK {
+				return compareFallback(a, b, opts.SortAscending)
+			}
+			if !aOK {
+				return false
+			}
+			if !bOK {
+				return true
+			}
+			if aValue == bValue {
+				return compareFallback(a, b, opts.SortAscending)
+			}
+			if opts.SortAscending {
+				return aValue < bValue
+			}
+			return aValue > bValue
 		default:
 			aTime := timeOrZero(a.LastVisitedAt)
 			bTime := timeOrZero(b.LastVisitedAt)
@@ -797,4 +904,19 @@ func compareFallback(a JobRecord, b JobRecord, ascending bool) bool {
 		return strings.Compare(a.ID, b.ID) < 0
 	}
 	return strings.Compare(a.ID, b.ID) > 0
+}
+
+func budgetMetric(job JobRecord) (float64, bool) {
+	if job.Budget != nil && job.Budget.FixedAmount != nil {
+		return *job.Budget.FixedAmount, true
+	}
+	if job.HourlyInfo != nil {
+		if job.HourlyInfo.Max != nil {
+			return *job.HourlyInfo.Max, true
+		}
+		if job.HourlyInfo.Min != nil {
+			return *job.HourlyInfo.Min, true
+		}
+	}
+	return 0, false
 }

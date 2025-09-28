@@ -161,9 +161,9 @@ func (s *Server) handleHealth(c *gin.Context) {
 // @Param payment_verified query bool false "Filter by payment verification"
 // @Param category query string false "Filter by category slug"
 // @Param category_group query string false "Filter by category group slug"
-// @Param status query int false "Filter by job status"
-// @Param job_type query int false "Filter by job type"
-// @Param contractor_tier query int false "Filter by contractor tier"
+// @Param status query string false "Filter by job status (open|closed or numeric code)"
+// @Param job_type query string false "Filter by job type (hourly|fixed-price or numeric code)"
+// @Param contractor_tier query string false "Filter by contractor tier (entry|intermediate|expert or numeric code)"
 // @Param country query string false "Filter by buyer country"
 // @Param tags query string false "Comma-separated required tags"
 // @Param posted_after query string false "ISO timestamp lower bound"
@@ -214,7 +214,7 @@ func (s *Server) handleJobs(c *gin.Context) {
 // @Param payment_verified query bool false "Filter by client payment verification"
 // @Param country query string false "Filter by client country"
 // @Param skills query string false "Comma-separated list of required skill labels"
-// @Param job_type query int false "Filter by job type"
+// @Param job_type query string false "Filter by job type (hourly|fixed-price or numeric code)"
 // @Param duration query string false "Filter by duration label"
 // @Param hourly_min query number false "Minimum hourly budget"
 // @Param hourly_max query number false "Maximum hourly budget"
@@ -277,7 +277,15 @@ func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]Jo
 
 	results := make([]JobRecord, 0, opts.Limit)
 	lookedAt := 0
-	maxDocs := int(math.Min(maxDocsCap, math.Max(float64(opts.Limit)*docsMultiplier, float64(opts.Limit*2))))
+	targetMatches := opts.Limit + opts.Offset
+	if targetMatches < opts.Limit {
+		targetMatches = opts.Limit
+	}
+	maxDocs := int(math.Min(
+		maxDocsCap,
+		math.Max(float64(targetMatches)*docsMultiplier, float64(targetMatches*2)),
+	))
+	matched := 0
 
 outer:
 	for {
@@ -306,6 +314,10 @@ outer:
 		for _, rec := range records {
 			job := rec
 			if !applyFilters(&job, opts) {
+				continue
+			}
+			matched++
+			if matched <= opts.Offset {
 				continue
 			}
 

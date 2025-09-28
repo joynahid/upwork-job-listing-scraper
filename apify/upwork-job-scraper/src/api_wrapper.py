@@ -46,21 +46,34 @@ class UpworkJobAPIWrapper:
         if filters:
             # Map filter names to API parameter names
             filter_mapping = {
+                "offset": "offset",
                 "paymentVerified": "payment_verified",
                 "categoryGroup": "category_group",
                 "jobType": "job_type",
                 "contractorTier": "contractor_tier",
                 "postedAfter": "posted_after",
                 "postedBefore": "posted_before",
+                "lastVisitedAfter": "last_visited_after",
                 "budgetMin": "budget_min",
-                "budgetMax": "budget_max"
+                "budgetMax": "budget_max",
+                "hourlyMin": "hourly_min",
+                "hourlyMax": "hourly_max",
+                "durationLabel": "duration_label",
+                "buyerTotalSpentMin": "buyer.total_spent_min",
+                "buyerTotalSpentMax": "buyer.total_spent_max",
+                "buyerTotalAssignmentsMin": "buyer.total_assignments_min",
+                "buyerTotalAssignmentsMax": "buyer.total_assignments_max",
+                "buyerTotalJobsWithHiresMin": "buyer.total_jobs_with_hires_min",
+                "buyerTotalJobsWithHiresMax": "buyer.total_jobs_with_hires_max",
             }
             
             for filter_key, filter_value in filters.items():
                 if filter_value is not None:
                     api_param = filter_mapping.get(filter_key, filter_key)
-                    if filter_key == "tags" and isinstance(filter_value, list):
+                    if filter_key in {"tags", "skills"} and isinstance(filter_value, list):
                         params[api_param] = ",".join(filter_value)
+                    elif isinstance(filter_value, list):
+                        params[api_param] = ",".join(str(item) for item in filter_value)
                     else:
                         params[api_param] = filter_value
 
