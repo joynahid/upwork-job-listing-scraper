@@ -393,6 +393,15 @@ class UpworkJobService:
                 logger.error("💥 Failed to extract job details from: %s", job["title"])
                 return
 
+            job_uid = job.get("uid") or detailed_job.get("uid")
+            if not job_uid:
+                logger.error(
+                    "💥 Missing job UID for %s; skipping save",
+                    job.get("title", "<unknown>"),
+                )
+                return
+
+            detailed_job["uid"] = job_uid
             detailed_job["url"] = self.driver.current_url
             detailed_job["scrape_metadata"] = {
                 "last_visited_at": datetime.now().isoformat(),
