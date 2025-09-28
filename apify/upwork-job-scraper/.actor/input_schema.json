@@ -12,6 +12,14 @@
             "default": 20,
             "editor": "number"
         },
+        "offset": {
+            "title": "Pagination Offset",
+            "type": "integer",
+            "description": "Skip this many matching jobs before returning results.",
+            "minimum": 0,
+            "default": 0,
+            "editor": "number"
+        },
         "paymentVerified": {
             "title": "Payment Verified Only",
             "type": "boolean",
@@ -61,12 +69,20 @@
             "title": "Client Country",
             "type": "string",
             "description": "Filter by buyer country (ISO-3166 alpha-2). Leave blank for any.",
-            "editor": "textfield"
+            "enum": ["", "AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR", "AM", "AW", "AU", "AT", "AZ", "BS", "BH", "BD", "BB", "BY", "BE", "BZ", "BJ", "BM", "BT", "BO", "BA", "BW", "BV", "BR", "IO", "VG", "BN", "BG", "BF", "BI", "KH", "CM", "CA", "CV", "BQ", "KY", "CF", "TD", "CL", "CN", "CX", "CC", "CO", "KM", "CK", "CR", "HR", "CU", "CW", "CY", "CZ", "CD", "DK", "DJ", "DM", "DO", "EC", "EG", "SV", "GQ", "ER", "EE", "SZ", "ET", "FK", "FO", "FJ", "FI", "FR", "GF", "PF", "TF", "GA", "GM", "GE", "DE", "GH", "GI", "GR", "GL", "GD", "GP", "GU", "GT", "GG", "GN", "GW", "GY", "HT", "HM", "HN", "HK", "HU", "IS", "IN", "ID", "IR", "IQ", "IE", "IM", "IL", "IT", "CI", "JM", "JP", "JE", "JO", "KZ", "KE", "KI", "XK", "KW", "KG", "LA", "LV", "LB", "LS", "LR", "LY", "LI", "LT", "LU", "MO", "MG", "MW", "MY", "MV", "ML", "MT", "MH", "MQ", "MR", "MU", "YT", "MX", "FM", "MD", "MC", "MN", "ME", "MS", "MA", "MZ", "MM", "NA", "NR", "NP", "NL", "NC", "NZ", "NI", "NE", "NG", "NU", "NF", "KP", "MK", "MP", "NO", "OM", "PK", "PW", "PS", "PA", "PG", "PY", "PE", "PH", "PN", "PL", "PT", "PR", "QA", "CG", "RE", "RO", "RU", "RW", "BL", "SH", "KN", "LC", "MF", "PM", "VC", "WS", "SM", "ST", "SA", "SN", "RS", "SC", "SL", "SG", "SX", "SK", "SI", "SB", "SO", "ZA", "GS", "KR", "SS", "ES", "LK", "SD", "SR", "SJ", "SE", "CH", "SY", "TW", "TJ", "TZ", "TH", "TL", "TG", "TK", "TO", "TT", "TN", "TR", "TM", "TC", "TV", "UM", "UG", "UA", "AE", "GB", "US", "VI", "UY", "UZ", "VU", "VA", "VE", "VN", "WF", "EH", "YE", "ZM", "ZW"],
+            "enumTitles": ["Any country", "Afghanistan", "Aland Islands", "Albania", "Algeria", "American Samoa", "Andorra", "Angola", "Anguilla", "Antarctica", "Antigua and Barbuda", "Argentina", "Armenia", "Aruba", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bermuda", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Bouvet Island", "Brazil", "British Indian Ocean Territory", "British Virgin Islands", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada", "Cape Verde", "Caribbean Netherlands", "Cayman Islands", "Central African Republic", "Chad", "Chile", "China", "Christmas Island", "Cocos Islands", "Colombia", "Comoros", "Cook Islands", "Costa Rica", "Croatia", "Cuba", "Curacao", "Cyprus", "Czech Republic", "Democratic Republic of the Congo", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Falkland Islands", "Faroe Islands", "Fiji", "Finland", "France", "French Guiana", "French Polynesia", "French Southern Territories", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Gibraltar", "Greece", "Greenland", "Grenada", "Guadeloupe", "Guam", "Guatemala", "Guernsey", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Heard Island and McDonald Islands", "Honduras", "Hong Kong", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Isle of Man", "Israel", "Italy", "Cote d'Ivoire", "Jamaica", "Japan", "Jersey", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Macau", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Martinique", "Mauritania", "Mauritius", "Mayotte", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Montserrat", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Caledonia", "New Zealand", "Nicaragua", "Niger", "Nigeria", "Niue", "Norfolk Island", "North Korea", "North Macedonia", "Northern Mariana Islands", "Norway", "Oman", "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Pitcairn Islands", "Poland", "Portugal", "Puerto Rico", "Qatar", "Republic of the Congo", "Reunion", "Romania", "Russia", "Rwanda", "Saint Barthelemy", "Saint Helena", "Saint Kitts and Nevis", "Saint Lucia", "Saint Martin", "Saint Pierre and Miquelon", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Sint Maarten", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Georgia", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Svalbard and Jan Mayen", "Sweden", "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tokelau", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Turks and Caicos Islands", "Tuvalu", "US Minor Outlying Islands", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "United States Virgin Islands", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Wallis and Futuna", "Western Sahara", "Yemen", "Zambia", "Zimbabwe"],
+            "editor": "select"
         },
         "tags": {
             "title": "Required Tags",
             "type": "string",
             "description": "Comma-separated tags that must appear on the job (matches any of the values).",
+            "editor": "textfield"
+        },
+        "skills": {
+            "title": "Must-Have Skills",
+            "type": "string",
+            "description": "Comma-separated skills to match against the job skills list (matches any).",
             "editor": "textfield"
         },
         "postedAfter": {
@@ -81,6 +97,12 @@
             "description": "Only include jobs posted before this timestamp (ISO format: 2023-01-01T00:00:00Z).",
             "editor": "textfield"
         },
+        "lastVisitedAfter": {
+            "title": "Client Activity After",
+            "type": "string",
+            "description": "Return jobs where the buyer was last active after this timestamp (ISO format: 2023-01-01T00:00:00Z).",
+            "editor": "textfield"
+        },
         "budgetMin": {
             "title": "Minimum Fixed Budget",
             "type": "integer",
@@ -92,6 +114,74 @@
             "title": "Maximum Fixed Budget",
             "type": "integer",
             "description": "Filter fixed-price jobs with budget less than or equal to this amount.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "hourlyMin": {
+            "title": "Minimum Hourly Rate",
+            "type": "integer",
+            "description": "Filter hourly jobs whose rate range starts at or above this amount.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "hourlyMax": {
+            "title": "Maximum Hourly Rate",
+            "type": "integer",
+            "description": "Filter hourly jobs whose rate range is at or below this amount.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "durationLabel": {
+            "title": "Duration Label",
+            "type": "string",
+            "description": "Match the duration label (e.g. ongoing, less than 1 month).",
+            "editor": "textfield"
+        },
+        "engagement": {
+            "title": "Engagement Type",
+            "type": "string",
+            "description": "Filter by engagement text such as part-time or full-time.",
+            "editor": "textfield"
+        },
+        "buyerTotalSpentMin": {
+            "title": "Buyer Spent (Min)",
+            "type": "integer",
+            "description": "Require the buyer to have spent at least this amount in USD historically.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalSpentMax": {
+            "title": "Buyer Spent (Max)",
+            "type": "integer",
+            "description": "Require the buyer to have spent at most this amount in USD historically.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalAssignmentsMin": {
+            "title": "Buyer Assignments (Min)",
+            "type": "integer",
+            "description": "Minimum number of assignments completed by the buyer.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalAssignmentsMax": {
+            "title": "Buyer Assignments (Max)",
+            "type": "integer",
+            "description": "Maximum number of assignments completed by the buyer.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalJobsWithHiresMin": {
+            "title": "Buyer Hires (Min)",
+            "type": "integer",
+            "description": "Minimum number of jobs where the buyer made a hire.",
+            "minimum": 0,
+            "editor": "number"
+        },
+        "buyerTotalJobsWithHiresMax": {
+            "title": "Buyer Hires (Max)",
+            "type": "integer",
+            "description": "Maximum number of jobs where the buyer made a hire.",
             "minimum": 0,
             "editor": "number"
         },
