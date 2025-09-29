@@ -286,6 +286,13 @@ class UpworkJobService:
 
         tab: Tab = self.driver._tab
 
+        # Temporary fix for the bug in Botasaurus Driver - dynamically add is_closed property
+        if not hasattr(self.driver._tab.__class__, 'is_closed'):
+            self.driver._tab.__class__.is_closed = property(
+                fget=lambda self: self.closed,
+                fset=lambda self, value: setattr(self, '_is_closed_override', value)
+            )
+
         try:
             logger.debug(f"Opening job URL: {job['uid']}")
 
