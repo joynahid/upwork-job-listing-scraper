@@ -290,11 +290,6 @@ class UpworkJobService:
             )
 
             new_job_urls.append(job)
-        logger.info(
-            "📊 Found %s new jobs to process individually in real-time (total processed=%s)",
-            len(new_job_urls),
-        )
-
         await self._process_job_urls_individually(
             new_job_urls[: self.config.max_jobs - len(self.comprehensive_jobs_found)]
         )

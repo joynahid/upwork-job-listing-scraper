@@ -13,7 +13,6 @@ from datetime import datetime
 from pathlib import Path
 
 from .core.service import UpworkJobService
-from .realtimedb import RealtimeJobDatabase
 from .schemas.input import ActorInput
 from botasaurus_driver.exceptions import CloudflareDetectionException
 
@@ -104,7 +103,6 @@ async def main() -> None:
 
     # Initialize variables for cleanup
     service = None
-    rt_db = None
     data_store = None
 
     try:
@@ -129,18 +127,6 @@ async def main() -> None:
         if actor_input.debug_mode:
             logger.info(f"Input parameters: {actor_input.model_dump_json(indent=2)}")
 
-        # Initialize database with proper error handling
-        stale_threshold = int(actor_input.delay_max)
-        try:
-            rt_db = RealtimeJobDatabase(stale_threshold_seconds=stale_threshold)
-            logger.info(
-                "Initialized job database with stale threshold: %d seconds",
-                stale_threshold,
-            )
-        except Exception as e:
-            logger.error(f"Failed to initialize database: {e}")
-            raise
-
         # Initialize the service
         service = UpworkJobService(actor_input, data_store)
 
@@ -164,9 +150,6 @@ async def main() -> None:
             total_jobs = len(service.comprehensive_jobs_found)
             logger.info(f"Successfully processed {total_jobs} comprehensive jobs")
 
-            # Get database statistics
-            db_stats = rt_db.get_stats()
-
             # Store summary statistics
             summary = {
                 "total_jobs_found": total_jobs,
@@ -175,7 +158,6 @@ async def main() -> None:
                 "max_jobs_limit": actor_input.max_jobs,
                 "processed_at": datetime.now().isoformat(),
                 "input_parameters": actor_input.model_dump(),
-                "database_stats": db_stats,
             }
 
             await data_store.set_value("RUN_SUMMARY", summary)
@@ -216,16 +198,8 @@ async def main() -> None:
         logger.error(f"Critical application error: {e}", exc_info=True)
         raise
     finally:
-        # Clean up database and data store (service cleanup handled by async context manager)
+        # Clean up local resources (service cleanup handled by async context manager)
         logger.info("Starting cleanup process...")
-
-        # Clean up database connection
-        if rt_db:
-            try:
-                rt_db.close()
-                logger.info("Database connection closed")
-            except Exception as db_error:
-                logger.error(f"Database cleanup failed: {db_error}")
 
         # Clean up data store
         if data_store:
