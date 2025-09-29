@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import random
+from collections import deque
 from datetime import datetime, timedelta
 from pathlib import Path
 import subprocess
@@ -34,7 +35,9 @@ class UpworkJobService:
     ):
         self.config: ActorInput = input_config
         self.driver: Driver | None = None
-        self.comprehensive_jobs_found: list[dict] = []
+        max_jobs_cap = max(1, int(getattr(self.config, "max_jobs", 1) or 1))
+        self.comprehensive_jobs_found: deque[str] = deque(maxlen=max_jobs_cap)
+        self._total_jobs_processed: int = 0
         self.proxy_url: str | None = None
         self.data_store = data_store
         self._initialized = False
@@ -68,6 +71,11 @@ class UpworkJobService:
     @property
     def individual_job_db(self) -> firestore.AsyncCollectionReference:
         return self.firebase.firestore.collection("individual_jobs")
+
+    @property
+    def total_jobs_processed(self) -> int:
+        """Total count of jobs processed in the current run."""
+        return self._total_jobs_processed
 
     async def initialize(self) -> None:
         """Initialize Botasaurus driver and proxy configuration."""
@@ -180,7 +188,7 @@ class UpworkJobService:
 
         logger.info(
             "🏁 Real-time job scraping session finished with %s jobs saved individually",
-            len(self.comprehensive_jobs_found),
+            self.total_jobs_processed,
         )
 
     async def handle_cloudflare_detection(
@@ -304,9 +312,14 @@ class UpworkJobService:
             )
 
             new_job_urls.append(job)
-        await self._process_job_urls_individually(
-            new_job_urls[: self.config.max_jobs - len(self.comprehensive_jobs_found)]
+        remaining_slots = max(
+            self.config.max_jobs - len(self.comprehensive_jobs_found), 0
         )
+        if remaining_slots == 0:
+            logger.info("Job limit reached while queuing detail pages; skipping")
+            return
+
+        await self._process_job_urls_individually(new_job_urls[:remaining_slots])
 
         await self._apply_random_delay()
 
@@ -321,6 +334,10 @@ class UpworkJobService:
         logger.info(f"Processing {total_jobs} job URLs individually in real-time")
 
         for i, job in enumerate(job_list, 1):
+            if len(self.comprehensive_jobs_found) >= self.config.max_jobs:
+                logger.info("Max job cap reached during individual job loop")
+                break
+
             # Check for cancellation before processing each job
             current_task = asyncio.current_task()
             if current_task and current_task.cancelled():
@@ -347,6 +364,9 @@ class UpworkJobService:
         if not self.driver:
             raise RuntimeError("Driver not initialized")
 
+        tab: Any | None = None
+        base_tab: Any | None = None
+
         try:
             logger.debug(f"Opening job URL: {job['uid']}")
 
@@ -357,6 +377,7 @@ class UpworkJobService:
             tab = self.driver.open_link_in_new_tab(
                 self.gen_job_url(job), bypass_cloudflare=True, wait=3, timeout=120
             )
+            logger.debug(f"Opened new tab for job: {job['uid']}")
 
             # Process the job and save immediately
             await self._extract_and_push_comprehensive_job_from_tab(tab, job, base_tab)
@@ -368,23 +389,26 @@ class UpworkJobService:
             if self.data_store:
                 await self.data_store.push_data(job)
         finally:
-            try:
-                # Ensure we always fall back to the original tab after closing detail views
-                if self.driver and base_tab:
-                    self.driver.switch_to_tab(base_tab)
-            except Exception as switch_exc:
-                logger.debug("Failed to switch back to base tab: %s", switch_exc)
+            # Ensure tab is always closed, even if processing failed
+            await self._safe_close_tab(tab, job.get('uid', 'unknown'))
+            
+            # Ensure we always fall back to the original tab after closing detail views
+            await self._safe_switch_to_base_tab(base_tab)
 
     async def _extract_and_push_comprehensive_job_from_tab(
         self, tab: Any, job: dict, base_tab: Any | None = None
     ) -> None:
         """Extract comprehensive job information from a pre-opened tab and save immediately."""
         if not self.driver:
+            logger.error("Driver not available for job extraction")
             return
+
+        job_title = job.get('title', 'Unknown Job')
+        job_uid = job.get('uid', 'unknown')
 
         try:
             # Switch to the specific tab
-            logger.info(f"🔄 Processing job in real-time: {job['title']}")
+            logger.info(f"🔄 Processing job in real-time: {job_title}")
             self.driver.switch_to_tab(tab)
 
             try:
@@ -398,48 +422,42 @@ class UpworkJobService:
                 logger.debug("Job title element not found immediately on detail page")
 
             # Extract comprehensive job details
-            logger.debug(f"🔍 Extracting job details from: {job['title']}")
+            logger.debug(f"🔍 Extracting job details from: {job_title}")
             detailed_job = self.extract_nuxt_with_js_engine(self.driver.page_html)
 
             if detailed_job is None:
-                logger.error("💥 Failed to extract job details from: %s", job["title"])
+                logger.error("💥 Failed to extract job details from: %s", job_title)
                 return
 
-            job_uid = job.get("uid") or detailed_job.get("uid")
-            if not job_uid:
+            final_job_uid = job_uid or detailed_job.get("uid")
+            if not final_job_uid:
                 logger.error(
                     "💥 Missing job UID for %s; skipping save",
-                    job.get("title", "<unknown>"),
+                    job_title,
                 )
                 return
 
-            detailed_job["uid"] = job_uid
+            detailed_job["uid"] = final_job_uid
             detailed_job["url"] = self.driver.current_url
             detailed_job["scrape_metadata"] = {
                 "last_visited_at": datetime.now().isoformat(),
                 "last_visited_by": "upwork_scraper",
             }
+            
+            # Save job details
             await self.save_individual_job_details(detailed_job)
+            logger.debug(f"✅ Successfully saved job details for: {job_title}")
+
+            # Track processed job
+            if final_job_uid not in self.comprehensive_jobs_found:
+                self.comprehensive_jobs_found.append(final_job_uid)
+                self._total_jobs_processed += 1
+                logger.debug(f"📊 Total jobs processed: {self._total_jobs_processed}")
+                
         except Exception as exc:
             logger.error(
-                "💥 Failed to extract job for %s: %s", job["title"], exc, exc_info=True
+                "💥 Failed to extract job for %s: %s", job_title, exc, exc_info=True
             )
-        finally:
-            try:
-                logger.debug(f"🔒 Closing tab for job URL: {job['title']}")
-                if tab and not getattr(tab, "is_closed", False):
-                    tab.close()
-            except Exception as close_exc:  # pragma: no cover - best effort
-                logger.debug("Failed to close detail tab: %s", close_exc)
-            finally:
-                if base_tab is not None:
-                    try:
-                        self.driver.switch_to_tab(base_tab)
-                    except Exception as switch_exc:
-                        logger.debug(
-                            "Unable to switch back to base tab after close: %s",
-                            switch_exc,
-                        )
 
     @staticmethod
     def extract_nuxt_with_js_engine(html: str) -> dict | None:
@@ -514,9 +532,6 @@ class UpworkJobService:
         try:
             nuxt_state = self.extract_nuxt_with_js_engine(self.driver.page_html)
             job_list = nuxt_state.get("state", {}).get("jobsSearch", {}).get("jobs", [])
-            with open("job_list_nuxt.json", "w") as f:
-                json.dump(job_list, f, indent=4)
-            print(job_list[0])
         except Exception as exc:
             logger.error(
                 "Error running job URL extraction script: %s", exc, exc_info=True
@@ -569,6 +584,17 @@ class UpworkJobService:
                     logger.warning("Tab closure timed out")
                 except Exception as exc:
                     logger.debug("Failed to close all tabs: %s", exc)
+                    
+                    # Try alternative method to close tabs individually
+                    try:
+                        if hasattr(self.driver, "tabs"):
+                            for i, tab in enumerate(self.driver.tabs):
+                                try:
+                                    await self._safe_close_tab(tab, f"cleanup_tab_{i}")
+                                except Exception as tab_exc:
+                                    logger.debug(f"Failed to close tab {i}: {tab_exc}")
+                    except Exception as alt_exc:
+                        logger.debug(f"Alternative tab closure failed: {alt_exc}")
 
                 # Close the driver
                 try:
@@ -604,6 +630,51 @@ class UpworkJobService:
 
         self._initialized = False
         logger.info("Service cleanup completed")
+
+    async def _safe_close_tab(self, tab: Any | None, job_uid: str = "unknown") -> None:
+        """Safely close a tab with proper error handling and logging."""
+        if not tab:
+            return
+            
+        try:
+            # Check if tab is already closed
+            if hasattr(tab, "is_closed") and getattr(tab, "is_closed", False):
+                logger.debug(f"Tab for job {job_uid} is already closed")
+                return
+                
+            # Attempt to close the tab
+            tab.close()
+            logger.debug(f"Successfully closed tab for job: {job_uid}")
+            
+        except Exception as close_exc:
+            logger.warning(f"Failed to close tab for job {job_uid}: {close_exc}")
+            
+            # Try alternative closure method if available
+            try:
+                if hasattr(tab, "quit"):
+                    tab.quit()
+                    logger.debug(f"Successfully quit tab for job: {job_uid}")
+            except Exception as quit_exc:
+                logger.debug(f"Failed to quit tab for job {job_uid}: {quit_exc}")
+
+    async def _safe_switch_to_base_tab(self, base_tab: Any | None) -> None:
+        """Safely switch back to the base tab with proper error handling."""
+        if not self.driver or not base_tab:
+            return
+            
+        try:
+            self.driver.switch_to_tab(base_tab)
+            logger.debug("Successfully switched back to base tab")
+        except Exception as switch_exc:
+            logger.warning(f"Failed to switch back to base tab: {switch_exc}")
+            
+            # Try to switch to the first available tab as fallback
+            try:
+                if hasattr(self.driver, "tabs") and self.driver.tabs:
+                    self.driver.switch_to_tab(self.driver.tabs[0])
+                    logger.debug("Switched to first available tab as fallback")
+            except Exception as fallback_exc:
+                logger.debug(f"Failed to switch to fallback tab: {fallback_exc}")
 
     async def _cleanup_hanging_processes(self) -> None:
         """Clean up any hanging Chrome processes with safety checks."""

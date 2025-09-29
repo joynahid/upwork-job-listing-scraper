@@ -32,15 +32,17 @@ type Server struct {
 	rootCtx           context.Context
 	cancelRoot        context.CancelFunc
 	client            *firestore.Client
+	redisClient       *RedisClient
+	apiKeyService     *APIKeyService
 	collectionName    string
 	jobListCollection string
-	apiKey            string
+	apiKey            string // Legacy API key for backward compatibility
 }
 
 // NewServer creates a server with Firestore client and configuration.
 func NewServer() (*Server, error) {
 	apiKey := mustEnv("API_KEY")
-	log.Printf("🔐 API key loaded (%d chars): %s", len(apiKey), maskAPIKey(apiKey))
+	log.Printf("🔐 Legacy API key loaded (%d chars): %s", len(apiKey), maskAPIKey(apiKey))
 
 	serviceAccountPath := mustEnv("FIREBASE_SERVICE_ACCOUNT_PATH")
 
@@ -72,20 +74,38 @@ func NewServer() (*Server, error) {
 
 	log.Printf("🔥 Firestore client initialized: project=%s, collections=%s,%s", projectID, collectionName, jobListCollection)
 
+	// Initialize Redis client
+	redisClient, err := NewRedisClient()
+	if err != nil {
+		cancel()
+		client.Close()
+		return nil, fmt.Errorf("failed to create Redis client: %w", err)
+	}
+
+	// Initialize API key service
+	apiKeyService := NewAPIKeyService(client, redisClient)
+
 	return &Server{
 		rootCtx:           ctx,
 		cancelRoot:        cancel,
 		client:            client,
+		redisClient:       redisClient,
+		apiKeyService:     apiKeyService,
 		collectionName:    collectionName,
 		jobListCollection: jobListCollection,
 		apiKey:            apiKey,
 	}, nil
 }
 
-// Shutdown releases Firestore resources.
+// Shutdown releases Firestore and Redis resources.
 func (s *Server) Shutdown() {
 	if s.cancelRoot != nil {
 		s.cancelRoot()
+	}
+	if s.redisClient != nil {
+		if err := s.redisClient.Close(); err != nil {
+			log.Printf("error closing Redis client: %v", err)
+		}
 	}
 	if s.client != nil {
 		if err := s.client.Close(); err != nil {
@@ -108,6 +128,10 @@ func (s *Server) Router() *gin.Engine {
 	group.GET("/jobs", s.handleJobs)
 	group.GET("/job-list", s.handleJobList)
 
+	// API key management endpoints
+	group.POST("/api-keys/refresh-cache", s.handleRefreshAPIKeysCache)
+	group.DELETE("/api-keys/:key/cache", s.handleClearAPIKeyCache)
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	return router
@@ -123,16 +147,36 @@ func (s *Server) loggingMiddleware() gin.HandlerFunc {
 	}
 }
 
-// authMiddleware ensures requests include the expected API key.
+// authMiddleware ensures requests include a valid API key.
 func (s *Server) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader("X-API-KEY")
-		if apiKey != s.apiKey {
-			respondError(c, http.StatusUnauthorized, "Invalid or missing X-API-KEY header")
+		if apiKey == "" {
+			respondError(c, http.StatusUnauthorized, "Missing X-API-KEY header")
 			c.Abort()
 			return
 		}
-		c.Next()
+
+		// First try the new API key service
+		validAPIKey, err := s.apiKeyService.ValidateAPIKey(c.Request.Context(), apiKey)
+		if err == nil && validAPIKey != nil {
+			// Store API key info in context for potential use in handlers
+			c.Set("api_key_info", validAPIKey)
+			c.Next()
+			return
+		}
+
+		// Fallback to legacy API key for backward compatibility
+		if apiKey == s.apiKey {
+			log.Printf("🔑 Using legacy API key: %s", maskAPIKey(apiKey))
+			c.Next()
+			return
+		}
+
+		// Log the validation error for debugging
+		log.Printf("🚫 API key validation failed: %v", err)
+		respondError(c, http.StatusUnauthorized, "Invalid or expired X-API-KEY")
+		c.Abort()
 	}
 }
 
@@ -398,6 +442,59 @@ func (s *Server) queryJobList(requestCtx context.Context, opts JobListFilterOpti
 	}
 
 	return results, nil
+}
+
+// handleRefreshAPIKeysCache forces a refresh of the API keys cache
+// @Summary Refresh API keys cache
+// @Description Forces a refresh of the API keys cache from Firestore
+// @Tags api-keys
+// @Produce json
+// @Success 200 {object} JobsResponse
+// @Failure 401 {object} JobsResponse
+// @Failure 500 {object} JobsResponse
+// @Security ApiKeyAuth
+// @Router /api-keys/refresh-cache [post]
+func (s *Server) handleRefreshAPIKeysCache(c *gin.Context) {
+	if err := s.apiKeyService.RefreshCache(c.Request.Context()); err != nil {
+		respondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to refresh cache: %v", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, JobsResponse{
+		Success:     true,
+		Message:     "API keys cache refreshed successfully",
+		LastUpdated: time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+// handleClearAPIKeyCache clears a specific API key from cache
+// @Summary Clear API key cache
+// @Description Removes a specific API key from the cache
+// @Tags api-keys
+// @Produce json
+// @Param key path string true "API key to clear from cache"
+// @Success 200 {object} JobsResponse
+// @Failure 401 {object} JobsResponse
+// @Failure 500 {object} JobsResponse
+// @Security ApiKeyAuth
+// @Router /api-keys/{key}/cache [delete]
+func (s *Server) handleClearAPIKeyCache(c *gin.Context) {
+	key := c.Param("key")
+	if key == "" {
+		respondError(c, http.StatusBadRequest, "API key parameter is required")
+		return
+	}
+
+	if err := s.apiKeyService.ClearAPIKeyCache(c.Request.Context(), key); err != nil {
+		respondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to clear cache: %v", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, JobsResponse{
+		Success:     true,
+		Message:     fmt.Sprintf("API key cache cleared for: %s", maskAPIKey(key)),
+		LastUpdated: time.Now().UTC().Format(time.RFC3339),
+	})
 }
 
 func respondError(c *gin.Context, status int, message string) {
