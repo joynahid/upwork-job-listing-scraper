@@ -72,9 +72,7 @@ async def run_main_with_shutdown():
                         "error": str(e),
                         "error_type": type(e).__name__,
                         "processed_at": datetime.now().isoformat(),
-                        "total_jobs_processed": len(service.comprehensive_jobs_found)
-                        if service
-                        else 0,
+                        "total_jobs_processed": service.total_jobs_processed if service else 0,
                     }
                     try:
                         await data_store.set_value("ERROR_SUMMARY", error_summary)

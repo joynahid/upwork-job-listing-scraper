@@ -121,7 +121,7 @@ async def run_scraper_iteration(
     """Run a single scraping iteration, returning the summary payload."""
     await service.initialize()
 
-    previous_total = len(service.comprehensive_jobs_found)
+    previous_total = service.total_jobs_processed
 
     search_urls = actor_input.build_search_urls()
     logger.info("Generated %s search URLs", len(search_urls))
@@ -134,7 +134,7 @@ async def run_scraper_iteration(
 
     await service.run_scraping(search_urls)
 
-    current_total = len(service.comprehensive_jobs_found)
+    current_total = service.total_jobs_processed
     processed_this_run = max(current_total - previous_total, 0)
 
     logger.info(
@@ -204,9 +204,7 @@ async def main() -> None:
                     "error": str(e),
                     "error_type": type(e).__name__,
                     "processed_at": datetime.now().isoformat(),
-                    "total_jobs_processed": len(service.comprehensive_jobs_found)
-                    if service
-                    else 0,
+                    "total_jobs_processed": service.total_jobs_processed if service else 0,
                 }
                 if data_store:
                     await data_store.set_value("ERROR_SUMMARY", error_summary)

@@ -7,8 +7,7 @@ import json
 import logging
 import os
 import random
-from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 import subprocess
 import tempfile
@@ -35,8 +34,6 @@ class UpworkJobService:
     ):
         self.config: ActorInput = input_config
         self.driver: Driver | None = None
-        max_jobs_cap = max(1, int(getattr(self.config, "max_jobs", 1) or 1))
-        self.comprehensive_jobs_found: deque[str] = deque(maxlen=max_jobs_cap)
         self._total_jobs_processed: int = 0
         self.proxy_url: str | None = None
         self.data_store = data_store
@@ -52,7 +49,6 @@ class UpworkJobService:
         self.firebase = get_firebase_with_config(
             service_account_path=os.environ["FIREBASE_SERVICE_ACCOUNT_PATH"],
         )
-        self.staleness_threshold_seconds = os.getenv("STALENESS_THRESHOLD", 200)
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -154,10 +150,6 @@ class UpworkJobService:
                 logger.info("Task cancelled - stopping scraping")
                 raise asyncio.CancelledError()
 
-            if len(self.comprehensive_jobs_found) >= self.config.max_jobs:
-                logger.info("Reached max_jobs limit; stopping further processing")
-                break
-
             logger.info("Processing search URL %s/%s: %s", index, len(search_urls), url)
             logger.info(f"Scraping search page {index}/{len(search_urls)}")
 
@@ -173,10 +165,6 @@ class UpworkJobService:
                 logger.error(
                     "Failed to process search URL %s: %s", url, exc, exc_info=True
                 )
-
-            if len(self.comprehensive_jobs_found) >= self.config.max_jobs:
-                logger.info("Max jobs reached after processing search URL %s", url)
-                break
 
             # Check for cancellation before delay
             current_task = asyncio.current_task()
@@ -211,39 +199,6 @@ class UpworkJobService:
                     retry_attempts,
                 )
                 raise exc
-
-    async def should_find_job_details(self, job: dict) -> bool:
-        """Check if we should find the job details."""
-        doc = await self.individual_job_db.document(job["uid"]).get()
-
-        now = datetime.now()
-        now.replace(tzinfo=None)
-
-        scrape_metadata = doc.get("scrape_metadata")
-
-        if scrape_metadata is None:
-            return True
-
-        last_visited_at = scrape_metadata.get("last_visited_at")
-
-        if isinstance(last_visited_at, str):
-            last_visited_at = datetime.fromisoformat(last_visited_at)
-            last_visited_at.replace(tzinfo=None)
-        else:
-            last_visited_at = datetime.now() - timedelta(seconds=10000)
-            last_visited_at.replace(tzinfo=None)
-
-        seconds_ago = now - last_visited_at
-
-        should_process = not doc.exists or seconds_ago > timedelta(
-            seconds=self.staleness_threshold_seconds
-        )
-
-        logger.info(
-            f"Job {job['title']} should process: {should_process}, seconds ago: {seconds_ago}"
-        )
-
-        return should_process
 
     def gen_job_url(self, job: dict) -> str:
         """Generate the job URL."""
@@ -283,43 +238,11 @@ class UpworkJobService:
         job_list = self._extract_job_urls_from_page()
         logger.info("Extracted %s job URLs from search page", len(job_list))
 
-        # Find by job_uid
         for job in job_list:
-            should_process = await self.should_find_job_details(job)
             await self.save_job_listing_details(job)
 
-            if not should_process:
-                logger.info(
-                    "Skipping job %s because it should not be processed", job["uid"]
-                )
-                continue
-
-        # Process each job URL to get comprehensive data
-        new_job_urls = []
-
-        for job in job_list:
-            job_id = job["uid"]
-
-            if not await self.should_find_job_details(job):
-                logger.warning(
-                    "🔄 Job %s already processed recently - skipping", job_id
-                )
-                continue
-
-            logger.info(
-                "✅ Adding job %s to processing queue",
-                job_id[:20] + "..." if len(job_id) > 20 else job_id,
-            )
-
-            new_job_urls.append(job)
-        remaining_slots = max(
-            self.config.max_jobs - len(self.comprehensive_jobs_found), 0
-        )
-        if remaining_slots == 0:
-            logger.info("Job limit reached while queuing detail pages; skipping")
-            return
-
-        await self._process_job_urls_individually(new_job_urls[:remaining_slots])
+        # Process each job URL to get comprehensive data with immediate tab cleanup per job
+        await self._process_job_urls_individually(job_list)
 
         await self._apply_random_delay()
 
@@ -334,10 +257,6 @@ class UpworkJobService:
         logger.info(f"Processing {total_jobs} job URLs individually in real-time")
 
         for i, job in enumerate(job_list, 1):
-            if len(self.comprehensive_jobs_found) >= self.config.max_jobs:
-                logger.info("Max job cap reached during individual job loop")
-                break
-
             # Check for cancellation before processing each job
             current_task = asyncio.current_task()
             if current_task and current_task.cancelled():
@@ -449,10 +368,8 @@ class UpworkJobService:
             logger.debug(f"✅ Successfully saved job details for: {job_title}")
 
             # Track processed job
-            if final_job_uid not in self.comprehensive_jobs_found:
-                self.comprehensive_jobs_found.append(final_job_uid)
-                self._total_jobs_processed += 1
-                logger.debug(f"📊 Total jobs processed: {self._total_jobs_processed}")
+            self._total_jobs_processed += 1
+            logger.debug(f"📊 Total jobs processed: {self._total_jobs_processed}")
                 
         except Exception as exc:
             logger.error(
@@ -637,25 +554,53 @@ class UpworkJobService:
             return
             
         try:
-            # Check if tab is already closed
+            # Check if tab is already closed when the attribute exists
             if hasattr(tab, "is_closed") and getattr(tab, "is_closed", False):
                 logger.debug(f"Tab for job {job_uid} is already closed")
                 return
-                
-            # Attempt to close the tab
-            tab.close()
-            logger.debug(f"Successfully closed tab for job: {job_uid}")
-            
+
+            close_method = getattr(tab, "close", None)
+            if callable(close_method):
+                try:
+                    close_method()
+                    logger.debug(f"Successfully closed tab for job: {job_uid}")
+                    return
+                except AttributeError as attr_exc:
+                    # Some Botasaurus tab implementations access is_closed internally; treat as benign
+                    if "is_closed" not in str(attr_exc):
+                        raise
+                    logger.debug(
+                        "Tab close raised AttributeError for is_closed; trying driver fallback"
+                    )
+
+            # Fallback to driver-provided close helpers where available
+            if self.driver:
+                driver_close = getattr(self.driver, "close_tab", None)
+                if callable(driver_close):
+                    try:
+                        driver_close(tab)
+                    except TypeError:
+                        driver_close()
+                    logger.debug(f"Driver-based tab close succeeded for job: {job_uid}")
+                    return
+
+                close_current = getattr(self.driver, "close_current_tab", None)
+                if callable(close_current):
+                    self.driver.switch_to_tab(tab)
+                    close_current()
+                    logger.debug(
+                        f"Driver close_current_tab succeeded for job: {job_uid}"
+                    )
+                    return
+
+            # Last resort: attempt quit on the tab
+            quit_method = getattr(tab, "quit", None)
+            if callable(quit_method):
+                quit_method()
+                logger.debug(f"Successfully quit tab for job: {job_uid}")
+
         except Exception as close_exc:
             logger.warning(f"Failed to close tab for job {job_uid}: {close_exc}")
-            
-            # Try alternative closure method if available
-            try:
-                if hasattr(tab, "quit"):
-                    tab.quit()
-                    logger.debug(f"Successfully quit tab for job: {job_uid}")
-            except Exception as quit_exc:
-                logger.debug(f"Failed to quit tab for job {job_uid}: {quit_exc}")
 
     async def _safe_switch_to_base_tab(self, base_tab: Any | None) -> None:
         """Safely switch back to the base tab with proper error handling."""
