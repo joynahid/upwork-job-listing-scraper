@@ -18,10 +18,17 @@ except ImportError:
 
 class UpworkJobStandbyHandler(BaseHTTPRequestHandler):
     """HTTP request handler for Apify Standby mode."""
-    
-    def __init__(self, job_processor: JobProcessor, *args, **kwargs):
+
+    def __init__(
+        self,
+        job_processor: JobProcessor,
+        event_loop: asyncio.AbstractEventLoop,
+        *args,
+        **kwargs,
+    ):
         """Initialize the handler with job processor."""
         self.job_processor = job_processor
+        self.event_loop = event_loop
         super().__init__(*args, **kwargs)
     
     def do_GET(self) -> None:
@@ -39,30 +46,26 @@ class UpworkJobStandbyHandler(BaseHTTPRequestHandler):
             
             Actor.log.info(f'🌐 HTTP request received: maxJobs={params["max_jobs"]}, filters={params["filters"]}')
             
-            # Run the job scraping asynchronously
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            try:
-                result = loop.run_until_complete(
-                    self.job_processor.process_jobs_batch(
-                        params["max_jobs"], 
-                        params["filters"], 
-                        params["debug_mode"]
-                    )
-                )
-                
-                # Send successful response
-                response_data = {
-                    "success": True,
-                    "message": f"Successfully processed {result['processed_count']} jobs",
-                    "data": result
-                }
-                
-                self._send_json_response(200, response_data)
-                
-            finally:
-                loop.close()
+            # Run the job scraping on the main asyncio event loop
+            future = asyncio.run_coroutine_threadsafe(
+                self.job_processor.process_jobs_batch(
+                    params["max_jobs"],
+                    params["filters"],
+                    params["debug_mode"],
+                ),
+                self.event_loop,
+            )
+
+            result = future.result()
+
+            # Send successful response
+            response_data = {
+                "success": True,
+                "message": f"Successfully processed {result['processed_count']} jobs",
+                "data": result,
+            }
+
+            self._send_json_response(200, response_data)
                 
         except Exception as e:
             Actor.log.error(f"❌ Error handling HTTP request: {e}")

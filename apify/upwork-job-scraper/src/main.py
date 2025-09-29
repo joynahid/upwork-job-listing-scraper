@@ -8,7 +8,8 @@ Supports both standard mode and Apify Standby mode for HTTP API access.
 from __future__ import annotations
 
 import asyncio
-from http.server import HTTPServer
+import threading
+from http.server import ThreadingHTTPServer
 
 from apify import Actor
 
@@ -73,7 +74,8 @@ async def run_standby_mode() -> None:
     Actor.log.info("🚀 Starting Upwork Job Scraper API Wrapper (Standby Mode)")
     Actor.log.info(f"📊 API Endpoint: {config.api_endpoint}")
     Actor.log.info(f"📊 Debug Mode: {config.debug_mode}")
-    Actor.log.info(f"🌐 Standby Port: {Actor.config.standby_port}")
+    standby_port = getattr(Actor.config, "web_server_port", Actor.config.standby_port)
+    Actor.log.info(f"🌐 Standby Port: {standby_port}")
 
     # Initialize components
     api_wrapper = UpworkJobAPIWrapper(config.api_endpoint, config.api_key, config.debug_mode)
@@ -81,16 +83,40 @@ async def run_standby_mode() -> None:
 
     try:
         # Create a handler factory that passes the job_processor to each request
-        def handler_factory(*args, **kwargs):
-            return UpworkJobStandbyHandler(job_processor, *args, **kwargs)
+        event_loop = asyncio.get_running_loop()
 
-        # Start HTTP server on standby port
-        with HTTPServer(('', Actor.config.standby_port), handler_factory) as http_server:
-            Actor.log.info(f"🌐 HTTP server started on port {Actor.config.standby_port}")
+        def handler_factory(*args, **kwargs):
+            return UpworkJobStandbyHandler(job_processor, event_loop, *args, **kwargs)
+
+        http_server: ThreadingHTTPServer | None = None
+        server_thread: threading.Thread | None = None
+
+        try:
+            http_server = ThreadingHTTPServer(('', standby_port), handler_factory)
+
+            Actor.log.info(f"🌐 HTTP server started on port {standby_port}")
             Actor.log.info("📋 Ready to handle requests and readiness probes")
-            
-            # Run server forever
-            http_server.serve_forever()
+
+            server_thread = threading.Thread(
+                target=http_server.serve_forever,
+                name="apify-standby-http-server",
+                daemon=True,
+            )
+            server_thread.start()
+
+            stop_event = asyncio.Event()
+
+            try:
+                await stop_event.wait()
+            except asyncio.CancelledError:
+                Actor.log.info("🛑 Standby mode shutdown signal received")
+                raise
+        finally:
+            if http_server is not None:
+                http_server.shutdown()
+                http_server.server_close()
+            if server_thread is not None and server_thread.is_alive():
+                server_thread.join(timeout=5)
 
     except Exception as e:
         Actor.log.error(f"❌ Standby server failed: {e}")
