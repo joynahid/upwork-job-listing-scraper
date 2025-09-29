@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import os
@@ -19,10 +18,7 @@ from bs4 import BeautifulSoup
 from google.cloud import firestore
 
 from src.firebase_provider import get_firebase_with_config
-from ..realtimedb import JobData, RealtimeJobDatabase
-
 from ..schemas.input import ActorInput
-from .extraction_scripts import JOB_LISTING_EXTRACTION_SCRIPT, JOB_DETAIL_SCRIPT
 
 logger = logging.getLogger(__name__)
 
@@ -33,17 +29,14 @@ class UpworkJobService:
     def __init__(
         self,
         input_config: ActorInput,
-        rt_db: RealtimeJobDatabase,
         data_store: Any = None,
     ):
         self.config: ActorInput = input_config
         self.driver: Driver | None = None
         self.comprehensive_jobs_found: list[dict] = []
         self.proxy_url: str | None = None
-        self.rt_db: RealtimeJobDatabase = rt_db
         self.data_store = data_store
         self._initialized = False
-        self.thread_pool = ThreadPoolExecutor(max_workers=5)
         self.firebase = get_firebase_with_config(
             service_account_path=os.environ["FIREBASE_SERVICE_ACCOUNT_PATH"],
         )
@@ -88,7 +81,7 @@ class UpworkJobService:
                 logger.info("No proxy configured - running without proxy")
 
             driver_kwargs: dict[str, Any] = {
-                "headless": False,
+                "headless": True,
                 "wait_for_complete_page_load": True,  # Don't wait for JS/dynamic content
                 "lang": "en-US,en",
             }
@@ -505,18 +498,6 @@ class UpworkJobService:
             }
 
         return job_list
-
-    def _extract_job_details(self) -> dict[str, Any] | None:
-        """Extract detailed job information from the current page."""
-        if not self.driver:
-            return None
-
-        try:
-            detail_data = self.driver.run_js(JOB_DETAIL_SCRIPT)
-            return detail_data
-        except Exception as exc:
-            logger.error("Error extracting job details: %s", exc)
-            return None
 
     async def _apply_random_delay(self) -> None:
         """Apply a random delay between configured min and max."""

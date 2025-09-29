@@ -1,8 +1,9 @@
 import asyncio
+import random
 import signal
 import sys
 import logging
-from time import sleep
+import time
 from typing import Optional
 
 from .main import main
@@ -42,11 +43,22 @@ async def run_main_with_shutdown():
     try:
         while not _shutdown_requested:
             _main_task = asyncio.create_task(main())
-            await _main_task
-            sleep(30)
+            try:
+                await _main_task
+            except asyncio.CancelledError:
+                logger.info("Main task was cancelled - cleanup completed")
+                raise
+            finally:
+                _main_task = None
+
+            if _shutdown_requested:
+                break
+
+            delay_seconds = random.randint(40, 60)
+            logger.info("Sleeping %s seconds before restarting main", delay_seconds)
+            await _sleep_with_shutdown_check(delay_seconds)
     except asyncio.CancelledError:
-        logger.info("Main task was cancelled - cleanup completed")
-        # Re-raise to properly propagate cancellation
+        logger.info("Main runner cancelled - exiting")
         raise
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt")
@@ -54,6 +66,16 @@ async def run_main_with_shutdown():
     except Exception as e:
         logger.error(f"Script failed with error: {e}", exc_info=True)
         return 1
+
+
+async def _sleep_with_shutdown_check(delay_seconds: int) -> None:
+    """Sleep in short intervals so shutdown signals can end the wait early."""
+    end_time = time.monotonic() + delay_seconds
+    while not _shutdown_requested:
+        remaining = end_time - time.monotonic()
+        if remaining <= 0:
+            break
+        await asyncio.sleep(min(1.0, remaining))
 
 
 try:

@@ -142,7 +142,7 @@ async def main() -> None:
             raise
 
         # Initialize the service
-        service = UpworkJobService(actor_input, rt_db, data_store)
+        service = UpworkJobService(actor_input, data_store)
 
         try:
             # Use async context manager for proper resource management
