@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import time
 from typing import Any
+from botasaurus_driver.driver import Tab
 from botasaurus_driver.exceptions import CloudflareDetectionException
 from botasaurus_driver import Driver
 from bs4 import BeautifulSoup
@@ -283,47 +284,33 @@ class UpworkJobService:
         if not self.driver:
             raise RuntimeError("Driver not initialized")
 
-        tab: Any | None = None
-        base_tab: Any | None = None
+        tab: Tab = self.driver._tab
 
         try:
             logger.debug(f"Opening job URL: {job['uid']}")
 
-            # Keep track of the originating tab so we can switch back after closing
-            base_tab = self.driver._tab
-
             # Open the job URL in a new tab
-            tab = self.driver.open_link_in_new_tab(
+            tab: Tab = self.driver.open_link_in_new_tab(
                 self.gen_job_url(job), bypass_cloudflare=True, wait=3, timeout=120
             )
             logger.debug(f"Opened new tab for job: {job['uid']}")
 
             # Process the job and save immediately
-            await self._extract_and_push_comprehensive_job_from_tab(tab, job, base_tab)
-
-        except Exception as exc:
-            logger.error(
-                f"Failed to process single job URL {job['title']}: {exc}", exc_info=True
-            )
-            if self.data_store:
-                await self.data_store.push_data(job)
+            await self._extract_and_push_comprehensive_job_from_tab(tab, job)
         finally:
             # Ensure tab is always closed, even if processing failed
-            await self._safe_close_tab(tab, job.get('uid', 'unknown'))
-            
-            # Ensure we always fall back to the original tab after closing detail views
-            await self._safe_switch_to_base_tab(base_tab)
+            tab.close()
 
     async def _extract_and_push_comprehensive_job_from_tab(
-        self, tab: Any, job: dict, base_tab: Any | None = None
+        self, tab: Tab, job: dict
     ) -> None:
         """Extract comprehensive job information from a pre-opened tab and save immediately."""
         if not self.driver:
             logger.error("Driver not available for job extraction")
             return
 
-        job_title = job.get('title', 'Unknown Job')
-        job_uid = job.get('uid', 'unknown')
+        job_title = job.get("title", "Unknown Job")
+        job_uid = job.get("uid", "unknown")
 
         try:
             # Switch to the specific tab
@@ -362,7 +349,7 @@ class UpworkJobService:
                 "last_visited_at": datetime.now().isoformat(),
                 "last_visited_by": "upwork_scraper",
             }
-            
+
             # Save job details
             await self.save_individual_job_details(detailed_job)
             logger.debug(f"✅ Successfully saved job details for: {job_title}")
@@ -370,7 +357,7 @@ class UpworkJobService:
             # Track processed job
             self._total_jobs_processed += 1
             logger.debug(f"📊 Total jobs processed: {self._total_jobs_processed}")
-                
+
         except Exception as exc:
             logger.error(
                 "💥 Failed to extract job for %s: %s", job_title, exc, exc_info=True
@@ -488,197 +475,15 @@ class UpworkJobService:
             try:
                 logger.info("Attempting to close Botasaurus driver...")
 
-                # Try to close all tabs first
-                try:
-                    await asyncio.wait_for(
-                        asyncio.get_event_loop().run_in_executor(
-                            None, self.driver.close_all_tabs
-                        ),
-                        timeout=5.0,
-                    )
-                    logger.debug("All tabs closed successfully")
-                except asyncio.TimeoutError:
-                    logger.warning("Tab closure timed out")
-                except Exception as exc:
-                    logger.debug("Failed to close all tabs: %s", exc)
-                    
-                    # Try alternative method to close tabs individually
-                    try:
-                        if hasattr(self.driver, "tabs"):
-                            for i, tab in enumerate(self.driver.tabs):
-                                try:
-                                    await self._safe_close_tab(tab, f"cleanup_tab_{i}")
-                                except Exception as tab_exc:
-                                    logger.debug(f"Failed to close tab {i}: {tab_exc}")
-                    except Exception as alt_exc:
-                        logger.debug(f"Alternative tab closure failed: {alt_exc}")
+                for tab in self.driver._browser.tabs:
+                    print(f"Closing tab: {tab}")
+                    tab.close()
 
-                # Close the driver
-                try:
-                    await asyncio.wait_for(
-                        asyncio.get_event_loop().run_in_executor(
-                            None, self.driver.close
-                        ),
-                        timeout=10.0,
-                    )
-                    logger.info("Driver closed successfully")
-                except asyncio.TimeoutError:
-                    logger.warning("Driver close timed out, attempting quit")
-                    try:
-                        self.driver.quit()
-                        logger.info("Driver quit completed")
-                    except Exception as quit_exc:
-                        logger.warning("Driver quit failed: %s", quit_exc)
-                except Exception as exc:
-                    logger.warning("Driver close failed: %s", exc)
-                    try:
-                        self.driver.quit()
-                        logger.info("Fallback quit completed")
-                    except Exception as quit_exc:
-                        logger.warning("Fallback quit failed: %s", quit_exc)
-
+                self.driver.close()
             except Exception as driver_exc:
                 logger.error("Driver cleanup error: %s", driver_exc)
             finally:
                 self.driver = None
 
-        # Step 2: Clean up any hanging processes
-        await self._cleanup_hanging_processes()
-
         self._initialized = False
-        logger.info("Service cleanup completed")
-
-    async def _safe_close_tab(self, tab: Any | None, job_uid: str = "unknown") -> None:
-        """Safely close a tab with proper error handling and logging."""
-        if not tab:
-            return
-            
-        try:
-            # Check if tab is already closed when the attribute exists
-            if hasattr(tab, "is_closed") and getattr(tab, "is_closed", False):
-                logger.debug(f"Tab for job {job_uid} is already closed")
-                return
-
-            close_method = getattr(tab, "close", None)
-            if callable(close_method):
-                try:
-                    close_method()
-                    logger.debug(f"Successfully closed tab for job: {job_uid}")
-                    return
-                except AttributeError as attr_exc:
-                    # Some Botasaurus tab implementations access is_closed internally; treat as benign
-                    if "is_closed" not in str(attr_exc):
-                        raise
-                    logger.debug(
-                        "Tab close raised AttributeError for is_closed; trying driver fallback"
-                    )
-
-            # Fallback to driver-provided close helpers where available
-            if self.driver:
-                driver_close = getattr(self.driver, "close_tab", None)
-                if callable(driver_close):
-                    try:
-                        driver_close(tab)
-                    except TypeError:
-                        driver_close()
-                    logger.debug(f"Driver-based tab close succeeded for job: {job_uid}")
-                    return
-
-                close_current = getattr(self.driver, "close_current_tab", None)
-                if callable(close_current):
-                    self.driver.switch_to_tab(tab)
-                    close_current()
-                    logger.debug(
-                        f"Driver close_current_tab succeeded for job: {job_uid}"
-                    )
-                    return
-
-            # Last resort: attempt quit on the tab
-            quit_method = getattr(tab, "quit", None)
-            if callable(quit_method):
-                quit_method()
-                logger.debug(f"Successfully quit tab for job: {job_uid}")
-
-        except Exception as close_exc:
-            logger.warning(f"Failed to close tab for job {job_uid}: {close_exc}")
-
-    async def _safe_switch_to_base_tab(self, base_tab: Any | None) -> None:
-        """Safely switch back to the base tab with proper error handling."""
-        if not self.driver or not base_tab:
-            return
-            
-        try:
-            self.driver.switch_to_tab(base_tab)
-            logger.debug("Successfully switched back to base tab")
-        except Exception as switch_exc:
-            logger.warning(f"Failed to switch back to base tab: {switch_exc}")
-            
-            # Try to switch to the first available tab as fallback
-            try:
-                if hasattr(self.driver, "tabs") and self.driver.tabs:
-                    self.driver.switch_to_tab(self.driver.tabs[0])
-                    logger.debug("Switched to first available tab as fallback")
-            except Exception as fallback_exc:
-                logger.debug(f"Failed to switch to fallback tab: {fallback_exc}")
-
-    async def _cleanup_hanging_processes(self) -> None:
-        """Clean up any hanging Chrome processes with safety checks."""
-        try:
-            import os
-            import subprocess
-            import platform
-
-            # Only attempt process cleanup on Unix-like systems
-            if platform.system() not in ["Linux", "Darwin"]:
-                logger.debug("Process cleanup skipped on %s", platform.system())
-                return
-
-            # Get current process ID to avoid killing ourselves
-            current_pid = os.getpid()
-
-            # Find Chrome processes with our pattern
-            try:
-                result = await asyncio.wait_for(
-                    asyncio.get_event_loop().run_in_executor(
-                        None,
-                        subprocess.run,
-                        ["pgrep", "-f", "bota.*chrome"],
-                        {"capture_output": True, "text": True},
-                    ),
-                    timeout=5.0,
-                )
-
-                if result.returncode == 0 and result.stdout:
-                    pids = result.stdout.strip().split("\n")
-                    killed_count = 0
-
-                    for pid_str in pids:
-                        try:
-                            pid = int(pid_str)
-                            if pid != current_pid:  # Don't kill ourselves
-                                os.kill(pid, 9)  # SIGKILL
-                                killed_count += 1
-                                logger.debug(f"Killed hanging Chrome process: {pid}")
-                        except (ValueError, ProcessLookupError):
-                            # Process already gone or invalid PID
-                            pass
-                        except PermissionError as e:
-                            logger.debug(
-                                f"Permission denied killing process {pid_str}: {e}"
-                            )
-
-                    if killed_count > 0:
-                        logger.info(
-                            f"Cleaned up {killed_count} hanging Chrome processes"
-                        )
-
-            except subprocess.CalledProcessError:
-                # pgrep found no processes, which is fine
-                logger.debug("No hanging Chrome processes found")
-            except asyncio.TimeoutError:
-                logger.warning("Process cleanup timed out")
-
-        except Exception as cleanup_exc:
-            logger.debug("Process cleanup failed: %s", cleanup_exc)
-
         logger.info("Service cleanup completed")
