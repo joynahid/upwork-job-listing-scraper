@@ -2,12 +2,16 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
 	"math"
 	"net/http"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -26,6 +30,10 @@ const (
 	maxDocsCap     = 500
 	docsMultiplier = 8
 	requestTimeout = 20 * time.Second
+
+	// Cache TTLs
+	jobsCacheTTL    = 5 * time.Minute
+	jobListCacheTTL = 5 * time.Minute
 )
 
 type Server struct {
@@ -132,6 +140,10 @@ func (s *Server) Router() *gin.Engine {
 	group.POST("/api-keys/refresh-cache", s.handleRefreshAPIKeysCache)
 	group.DELETE("/api-keys/:key/cache", s.handleClearAPIKeyCache)
 
+	// Cache management endpoints
+	group.GET("/cache/stats", s.handleCacheStats)
+	group.DELETE("/cache/clear", s.handleClearCache)
+
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	return router
@@ -222,6 +234,22 @@ func (s *Server) handleHealth(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /jobs [get]
 func (s *Server) handleJobs(c *gin.Context) {
+	// Generate cache key from query parameters
+	cacheKey := generateCacheKey("jobs", c.Request.URL.Query())
+
+	// Try to get from cache
+	var cachedResponse JobsResponse
+	if err := s.redisClient.Get(c.Request.Context(), cacheKey, &cachedResponse); err == nil {
+		s.redisClient.Incr(c.Request.Context(), "cache:stats:hits")
+		log.Printf("💚 Cache HIT for /jobs (key: %s)", cacheKey[len(cacheKey)-16:])
+		c.JSON(http.StatusOK, cachedResponse)
+		return
+	}
+
+	// Cache miss - query Firestore
+	s.redisClient.Incr(c.Request.Context(), "cache:stats:misses")
+	log.Printf("💔 Cache MISS for /jobs (key: %s)", cacheKey[len(cacheKey)-16:])
+
 	opts, err := parseFilterOptions(c.Request.URL.Query())
 	if err != nil {
 		respondError(c, http.StatusBadRequest, err.Error())
@@ -241,12 +269,21 @@ func (s *Server) handleJobs(c *gin.Context) {
 		dtos = append(dtos, job.ToDTO())
 	}
 
-	c.JSON(http.StatusOK, JobsResponse{
+	response := JobsResponse{
 		Success:     true,
 		Data:        dtos,
 		Count:       len(dtos),
 		LastUpdated: time.Now().UTC().Format(time.RFC3339),
-	})
+	}
+
+	// Cache the response
+	if err := s.redisClient.Set(c.Request.Context(), cacheKey, response, jobsCacheTTL); err != nil {
+		log.Printf("⚠️ Failed to cache response: %v", err)
+	} else {
+		log.Printf("💾 Cached response for %v", jobsCacheTTL)
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // handleJobList returns job_list entries with optional filtering.
@@ -273,6 +310,22 @@ func (s *Server) handleJobs(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /job-list [get]
 func (s *Server) handleJobList(c *gin.Context) {
+	// Generate cache key from query parameters
+	cacheKey := generateCacheKey("job-list", c.Request.URL.Query())
+
+	// Try to get from cache
+	var cachedResponse JobListResponse
+	if err := s.redisClient.Get(c.Request.Context(), cacheKey, &cachedResponse); err == nil {
+		s.redisClient.Incr(c.Request.Context(), "cache:stats:hits")
+		log.Printf("💚 Cache HIT for /job-list (key: %s)", cacheKey[len(cacheKey)-16:])
+		c.JSON(http.StatusOK, cachedResponse)
+		return
+	}
+
+	// Cache miss - query Firestore
+	s.redisClient.Incr(c.Request.Context(), "cache:stats:misses")
+	log.Printf("💔 Cache MISS for /job-list (key: %s)", cacheKey[len(cacheKey)-16:])
+
 	opts, err := parseJobListFilterOptions(c.Request.URL.Query())
 	if err != nil {
 		respondError(c, http.StatusBadRequest, err.Error())
@@ -292,12 +345,21 @@ func (s *Server) handleJobList(c *gin.Context) {
 		dtos = append(dtos, job.ToDTO())
 	}
 
-	c.JSON(http.StatusOK, JobListResponse{
+	response := JobListResponse{
 		Success:     true,
 		Data:        dtos,
 		Count:       len(dtos),
 		LastUpdated: time.Now().UTC().Format(time.RFC3339),
-	})
+	}
+
+	// Cache the response
+	if err := s.redisClient.Set(c.Request.Context(), cacheKey, response, jobListCacheTTL); err != nil {
+		log.Printf("⚠️ Failed to cache response: %v", err)
+	} else {
+		log.Printf("💾 Cached response for %v", jobListCacheTTL)
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]JobRecord, error) {
@@ -319,7 +381,6 @@ func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]Jo
 	iter := s.client.Collection(s.collectionName).Documents(ctx)
 	defer iter.Stop()
 
-	results := make([]JobRecord, 0, opts.Limit)
 	lookedAt := 0
 	targetMatches := opts.Limit + opts.Offset
 	if targetMatches < opts.Limit {
@@ -329,9 +390,7 @@ func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]Jo
 		maxDocsCap,
 		math.Max(float64(targetMatches)*docsMultiplier, float64(targetMatches*2)),
 	))
-	matched := 0
-
-outer:
+	results := make([]JobRecord, 0, targetMatches)
 	for {
 		if lookedAt >= maxDocs {
 			break
@@ -360,19 +419,18 @@ outer:
 			if !applyFilters(&job, opts) {
 				continue
 			}
-			matched++
-			if matched <= opts.Offset {
-				continue
-			}
 
 			results = append(results, job)
-			if len(results) >= opts.Limit {
-				break outer
-			}
 		}
 	}
 
 	sortJobs(results, opts)
+	if opts.Offset > 0 {
+		if opts.Offset >= len(results) {
+			return []JobRecord{}, nil
+		}
+		results = results[opts.Offset:]
+	}
 	if len(results) > opts.Limit {
 		results = results[:opts.Limit]
 	}
@@ -399,9 +457,9 @@ func (s *Server) queryJobList(requestCtx context.Context, opts JobListFilterOpti
 	iter := s.client.Collection(s.jobListCollection).Documents(ctx)
 	defer iter.Stop()
 
-	results := make([]JobSummaryRecord, 0, opts.Limit)
-	lookedAt := 0
 	maxDocs := int(math.Min(maxDocsCap, math.Max(float64(opts.Limit)*docsMultiplier, float64(opts.Limit*2))))
+	results := make([]JobSummaryRecord, 0, maxDocs)
+	lookedAt := 0
 
 	for {
 		if lookedAt >= maxDocs {
@@ -431,9 +489,6 @@ func (s *Server) queryJobList(requestCtx context.Context, opts JobListFilterOpti
 		}
 
 		results = append(results, *record)
-		if len(results) >= opts.Limit {
-			break
-		}
 	}
 
 	sortJobSummaries(results, opts)
@@ -497,6 +552,64 @@ func (s *Server) handleClearAPIKeyCache(c *gin.Context) {
 	})
 }
 
+// handleCacheStats returns cache hit/miss statistics
+// @Summary Get cache statistics
+// @Description Returns cache hit/miss ratio and performance metrics
+// @Tags cache
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} JobsResponse
+// @Failure 500 {object} JobsResponse
+// @Security ApiKeyAuth
+// @Router /cache/stats [get]
+func (s *Server) handleCacheStats(c *gin.Context) {
+	stats, err := s.redisClient.GetStats(c.Request.Context())
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to get cache stats: %v", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    stats,
+	})
+}
+
+// handleClearCache clears all response caches
+// @Summary Clear all response caches
+// @Description Removes all cached responses (does not affect API key cache)
+// @Tags cache
+// @Produce json
+// @Success 200 {object} JobsResponse
+// @Failure 401 {object} JobsResponse
+// @Failure 500 {object} JobsResponse
+// @Security ApiKeyAuth
+// @Router /cache/clear [delete]
+func (s *Server) handleClearCache(c *gin.Context) {
+	// Clear response caches (keys starting with "response:")
+	ctx := c.Request.Context()
+	iter := s.redisClient.client.Scan(ctx, 0, "response:*", 0).Iterator()
+	count := 0
+	for iter.Next(ctx) {
+		if err := s.redisClient.Delete(ctx, iter.Val()); err != nil {
+			log.Printf("Failed to delete cache key %s: %v", iter.Val(), err)
+		} else {
+			count++
+		}
+	}
+	if err := iter.Err(); err != nil {
+		respondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to clear cache: %v", err))
+		return
+	}
+
+	log.Printf("🗑️ Cleared %d cache entries", count)
+	c.JSON(http.StatusOK, JobsResponse{
+		Success:     true,
+		Message:     fmt.Sprintf("Cleared %d cache entries", count),
+		LastUpdated: time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
 func respondError(c *gin.Context, status int, message string) {
 	c.JSON(status, JobsResponse{
 		Success:     false,
@@ -513,4 +626,31 @@ func isContextCanceled(err error) bool {
 		return true
 	}
 	return status.Code(err) == codes.Canceled
+}
+
+// generateCacheKey creates a deterministic cache key from query parameters
+func generateCacheKey(endpoint string, queryParams map[string][]string) string {
+	// Sort keys for deterministic output
+	keys := make([]string, 0, len(queryParams))
+	for k := range queryParams {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Build query string
+	var parts []string
+	for _, k := range keys {
+		values := queryParams[k]
+		sort.Strings(values) // Sort values too
+		for _, v := range values {
+			parts = append(parts, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
+	queryString := strings.Join(parts, "&")
+	fullKey := fmt.Sprintf("%s?%s", endpoint, queryString)
+
+	// Hash for shorter key
+	hash := sha256.Sum256([]byte(fullKey))
+	return fmt.Sprintf("response:%s:%s", endpoint, hex.EncodeToString(hash[:])[:16])
 }

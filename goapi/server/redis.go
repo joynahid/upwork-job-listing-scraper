@@ -116,3 +116,26 @@ func (r *RedisClient) SetNX(ctx context.Context, key string, value interface{}, 
 
 // ErrCacheNotFound is returned when a key is not found in cache
 var ErrCacheNotFound = fmt.Errorf("key not found in cache")
+
+// Incr increments a counter in Redis
+func (r *RedisClient) Incr(ctx context.Context, key string) (int64, error) {
+	return r.client.Incr(ctx, key).Result()
+}
+
+// GetStats returns cache statistics
+func (r *RedisClient) GetStats(ctx context.Context) (map[string]int64, error) {
+	stats := make(map[string]int64)
+
+	// Get hit/miss counts
+	hits, _ := r.client.Get(ctx, "cache:stats:hits").Int64()
+	misses, _ := r.client.Get(ctx, "cache:stats:misses").Int64()
+
+	stats["hits"] = hits
+	stats["misses"] = misses
+
+	if hits+misses > 0 {
+		stats["hit_rate_percent"] = (hits * 100) / (hits + misses)
+	}
+
+	return stats, nil
+}

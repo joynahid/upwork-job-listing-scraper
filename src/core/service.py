@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
 import tempfile
@@ -353,7 +353,7 @@ class UpworkJobService:
             detailed_job["uid"] = final_job_uid
             detailed_job["url"] = self.driver.current_url
             detailed_job["scrape_metadata"] = {
-                "last_visited_at": datetime.now().isoformat(),
+                "last_visited_at": datetime.now(timezone.utc).isoformat(),
                 "last_visited_by": "upwork_scraper",
             }
 
@@ -452,7 +452,7 @@ class UpworkJobService:
         # add metadata to the job list
         for job in job_list:
             job["scrape_metadata"] = {
-                "last_visited_at": datetime.now().isoformat(),
+                "last_visited_at": datetime.now(timezone.utc).isoformat(),
                 "last_visited_by": "upwork_scraper",
             }
 

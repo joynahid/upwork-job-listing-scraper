@@ -467,45 +467,53 @@ func sortJobSummaries(jobs []JobSummaryRecord, opts JobListFilterOptions) {
 		case SortPostedOn:
 			aTime := timeOrZero(a.PublishedOn)
 			bTime := timeOrZero(b.PublishedOn)
+
+			// Handle nil/zero times - always sort them to the end regardless of direction
+			aZero := aTime.IsZero()
+			bZero := bTime.IsZero()
+
+			if aZero && bZero {
+				return compareSummaryFallback(a, b, opts.SortAscending)
+			}
+			if aZero {
+				return false // a goes to the end
+			}
+			if bZero {
+				return true // b goes to the end, a comes first
+			}
+
 			if aTime.Equal(bTime) {
 				return compareSummaryFallback(a, b, opts.SortAscending)
 			}
+
 			if opts.SortAscending {
-				if aTime.IsZero() {
-					return false
-				}
-				if bTime.IsZero() {
-					return true
-				}
 				return aTime.Before(bTime)
-			}
-			if aTime.IsZero() {
-				return false
-			}
-			if bTime.IsZero() {
-				return true
 			}
 			return aTime.After(bTime)
 		default:
 			aTime := timeOrZero(a.LastVisitedAt)
 			bTime := timeOrZero(b.LastVisitedAt)
+
+			// Handle nil/zero times - always sort them to the end regardless of direction
+			aZero := aTime.IsZero()
+			bZero := bTime.IsZero()
+
+			if aZero && bZero {
+				return compareSummaryFallback(a, b, opts.SortAscending)
+			}
+			if aZero {
+				return false // a goes to the end
+			}
+			if bZero {
+				return true // b goes to the end, a comes first
+			}
+
 			if aTime.Equal(bTime) {
 				return compareSummaryFallback(a, b, opts.SortAscending)
 			}
+
 			if opts.SortAscending {
-				if aTime.IsZero() {
-					return false
-				}
-				if bTime.IsZero() {
-					return true
-				}
 				return aTime.Before(bTime)
-			}
-			if aTime.IsZero() {
-				return false
-			}
-			if bTime.IsZero() {
-				return true
 			}
 			return aTime.After(bTime)
 		}
@@ -835,23 +843,27 @@ func sortJobs(jobs []JobRecord, opts FilterOptions) {
 		case SortPostedOn:
 			aTime := timeOrZero(a.PostedOn)
 			bTime := timeOrZero(b.PostedOn)
+
+			// Handle nil/zero times - always sort them to the end regardless of direction
+			aZero := aTime.IsZero()
+			bZero := bTime.IsZero()
+
+			if aZero && bZero {
+				return compareFallback(a, b, opts.SortAscending)
+			}
+			if aZero {
+				return false // a goes to the end
+			}
+			if bZero {
+				return true // b goes to the end, a comes first
+			}
+
 			if aTime.Equal(bTime) {
 				return compareFallback(a, b, opts.SortAscending)
 			}
+
 			if opts.SortAscending {
-				if aTime.IsZero() {
-					return false
-				}
-				if bTime.IsZero() {
-					return true
-				}
 				return aTime.Before(bTime)
-			}
-			if aTime.IsZero() {
-				return false
-			}
-			if bTime.IsZero() {
-				return true
 			}
 			return aTime.After(bTime)
 		case SortBudget:
@@ -876,23 +888,27 @@ func sortJobs(jobs []JobRecord, opts FilterOptions) {
 		default:
 			aTime := timeOrZero(a.LastVisitedAt)
 			bTime := timeOrZero(b.LastVisitedAt)
+
+			// Handle nil/zero times - always sort them to the end regardless of direction
+			aZero := aTime.IsZero()
+			bZero := bTime.IsZero()
+
+			if aZero && bZero {
+				return compareFallback(a, b, opts.SortAscending)
+			}
+			if aZero {
+				return false // a goes to the end
+			}
+			if bZero {
+				return true // b goes to the end, a comes first
+			}
+
 			if aTime.Equal(bTime) {
 				return compareFallback(a, b, opts.SortAscending)
 			}
+
 			if opts.SortAscending {
-				if aTime.IsZero() {
-					return false
-				}
-				if bTime.IsZero() {
-					return true
-				}
 				return aTime.Before(bTime)
-			}
-			if aTime.IsZero() {
-				return false
-			}
-			if bTime.IsZero() {
-				return true
 			}
 			return aTime.After(bTime)
 		}
