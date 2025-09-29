@@ -81,7 +81,7 @@ class UpworkJobService:
                 logger.info("No proxy configured - running without proxy")
 
             driver_kwargs: dict[str, Any] = {
-                "headless": True,
+                "headless": False,
                 "wait_for_complete_page_load": True,  # Don't wait for JS/dynamic content
                 "lang": "en-US,en",
             }
