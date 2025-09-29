@@ -15,8 +15,12 @@ services:
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
       - FIRESTORE_COLLECTION=${FIRESTORE_COLLECTION:-individual_jobs}
       - FIRESTORE_JOB_LIST_COLLECTION=${FIRESTORE_JOB_LIST_COLLECTION:-job_list}
+      - REDIS_ADDR=${REDIS_ADDR:-redis:6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     volumes:
       - /root/upwork-job-scraper-d1f2c-firebase-adminsdk-fbsvc-3c0e2df938.json:/app/config/firebase-service-account.json:ro
+    depends_on:
+      - redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--header=X-API-KEY: ${API_KEY:-your-secret-api-key-here}", "-O", "/dev/null", "http://localhost:8080/health"]
@@ -26,6 +30,27 @@ services:
       start_period: 40s
     networks:
       - upwork-job-listing-scraper-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: upwork-api-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - upwork-job-listing-scraper-network
+
+volumes:
+  redis_data:
+    driver: local
 
 networks:
   upwork-job-listing-scraper-network:
