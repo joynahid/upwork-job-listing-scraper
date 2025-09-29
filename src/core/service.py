@@ -8,6 +8,7 @@ import logging
 import os
 import random
 from datetime import datetime, timedelta
+from pathlib import Path
 import subprocess
 import tempfile
 import time
@@ -37,10 +38,18 @@ class UpworkJobService:
         self.proxy_url: str | None = None
         self.data_store = data_store
         self._initialized = False
+        browser_profile_env = os.getenv("BROWSER_PROFILE_PATH")
+        default_profile = Path("browser_data") / "upwork_scraper_profile"
+        self.browser_profile_path = (
+            Path(browser_profile_env).expanduser()
+            if browser_profile_env
+            else default_profile
+        ).resolve()
+        self.browser_profile_path.mkdir(parents=True, exist_ok=True)
         self.firebase = get_firebase_with_config(
             service_account_path=os.environ["FIREBASE_SERVICE_ACCOUNT_PATH"],
         )
-        self.staleness_threshold_seconds = os.getenv("STALENESS_THRESHOLD", 60)
+        self.staleness_threshold_seconds = os.getenv("STALENESS_THRESHOLD", 200)
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -89,8 +98,13 @@ class UpworkJobService:
             if self.proxy_url:
                 driver_kwargs["proxy"] = self.proxy_url
 
+            driver_kwargs["profile"] = str(self.browser_profile_path)
+
             logger.info(
                 "Starting Botasaurus driver with headless=%s", driver_kwargs["headless"]
+            )
+            logger.info(
+                "Using persistent browser profile at %s", self.browser_profile_path
             )
 
             # Check for cancellation before creating driver
@@ -336,13 +350,16 @@ class UpworkJobService:
         try:
             logger.debug(f"Opening job URL: {job['uid']}")
 
+            # Keep track of the originating tab so we can switch back after closing
+            base_tab = self.driver._tab
+
             # Open the job URL in a new tab
             tab = self.driver.open_link_in_new_tab(
                 self.gen_job_url(job), bypass_cloudflare=True, wait=3, timeout=120
             )
 
             # Process the job and save immediately
-            await self._extract_and_push_comprehensive_job_from_tab(tab, job)
+            await self._extract_and_push_comprehensive_job_from_tab(tab, job, base_tab)
 
         except Exception as exc:
             logger.error(
@@ -350,9 +367,16 @@ class UpworkJobService:
             )
             if self.data_store:
                 await self.data_store.push_data(job)
+        finally:
+            try:
+                # Ensure we always fall back to the original tab after closing detail views
+                if self.driver and base_tab:
+                    self.driver.switch_to_tab(base_tab)
+            except Exception as switch_exc:
+                logger.debug("Failed to switch back to base tab: %s", switch_exc)
 
     async def _extract_and_push_comprehensive_job_from_tab(
-        self, tab: Any, job: dict
+        self, tab: Any, job: dict, base_tab: Any | None = None
     ) -> None:
         """Extract comprehensive job information from a pre-opened tab and save immediately."""
         if not self.driver:
@@ -403,9 +427,19 @@ class UpworkJobService:
         finally:
             try:
                 logger.debug(f"🔒 Closing tab for job URL: {job['title']}")
-                tab.close()
+                if tab and not getattr(tab, "is_closed", False):
+                    tab.close()
             except Exception as close_exc:  # pragma: no cover - best effort
                 logger.debug("Failed to close detail tab: %s", close_exc)
+            finally:
+                if base_tab is not None:
+                    try:
+                        self.driver.switch_to_tab(base_tab)
+                    except Exception as switch_exc:
+                        logger.debug(
+                            "Unable to switch back to base tab after close: %s",
+                            switch_exc,
+                        )
 
     @staticmethod
     def extract_nuxt_with_js_engine(html: str) -> dict | None:
@@ -435,7 +469,10 @@ class UpworkJobService:
 
                 # Write to temporary file and execute with Node.js
                 with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".js", delete=False
+                    mode="w",
+                    suffix=".js",
+                    delete=False,
+                    encoding="utf-8",
                 ) as temp_file:
                     temp_file.write(js_code)
                     temp_file_path = temp_file.name
@@ -446,6 +483,7 @@ class UpworkJobService:
                         ["node", temp_file_path],
                         capture_output=True,
                         text=True,
+                        encoding="utf-8",
                         check=True,
                     )
 

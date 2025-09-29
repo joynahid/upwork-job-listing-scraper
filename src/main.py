@@ -11,10 +11,14 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Tuple
 
 from .core.service import UpworkJobService
 from .schemas.input import ActorInput
 from botasaurus_driver.exceptions import CloudflareDetectionException
+
+
+logger = logging.getLogger(__name__)
 
 
 class DateTimeEncoder(json.JSONEncoder):
@@ -87,6 +91,75 @@ class SimpleDataStore:
         return False
 
 
+def prepare_scraper_environment() -> Tuple[ActorInput, SimpleDataStore]:
+    """Create actor input and data store using environment defaults."""
+    storage_dir = os.getenv("LOCAL_STORAGE_DIR", "./storage")
+    data_store = SimpleDataStore(storage_dir)
+
+    actor_input_raw = {
+        "search_parameters": {
+            "sort_by": "recency",
+        },
+        "max_jobs": 10,
+        "debug_mode": True,
+    }
+
+    logger.info("Using default input configuration with recency sorting")
+    actor_input = ActorInput(**actor_input_raw)
+
+    if actor_input.debug_mode:
+        logger.info(
+            "Input parameters: %s", actor_input.model_dump_json(indent=2)
+        )
+
+    return actor_input, data_store
+
+
+async def run_scraper_iteration(
+    service: UpworkJobService, actor_input: ActorInput, data_store: SimpleDataStore
+) -> dict:
+    """Run a single scraping iteration, returning the summary payload."""
+    await service.initialize()
+
+    previous_total = len(service.comprehensive_jobs_found)
+
+    search_urls = actor_input.build_search_urls()
+    logger.info("Generated %s search URLs", len(search_urls))
+
+    if actor_input.debug_mode:
+        for i, url in enumerate(search_urls, 1):
+            logger.info("URL %s: %s", i, url)
+
+    logger.info("Starting job scraping...")
+
+    await service.run_scraping(search_urls)
+
+    current_total = len(service.comprehensive_jobs_found)
+    processed_this_run = max(current_total - previous_total, 0)
+
+    logger.info(
+        "Successfully processed %s comprehensive jobs in this iteration",
+        processed_this_run,
+    )
+
+    summary = {
+        "total_jobs_found": processed_this_run,
+        "search_urls_count": len(search_urls),
+        "extraction_type": "comprehensive",
+        "max_jobs_limit": actor_input.max_jobs,
+        "processed_at": datetime.now().isoformat(),
+        "input_parameters": actor_input.model_dump(),
+    }
+
+    await data_store.set_value("RUN_SUMMARY", summary)
+    logger.info(
+        "Completed successfully - %s comprehensive jobs processed",
+        processed_this_run,
+    )
+
+    return summary
+
+
 async def main() -> None:
     """Main entry point for the Upwork job listing scraper."""
     # Configure logging with websocket error filtering
@@ -95,7 +168,6 @@ async def main() -> None:
         level=getattr(logging, log_level),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    logger = logging.getLogger(__name__)
 
     # Filter out excessive websocket error logs to prevent spam
     websocket_logger = logging.getLogger("websocket")
@@ -106,26 +178,9 @@ async def main() -> None:
     data_store = None
 
     try:
-        # Get storage directory from environment
-        storage_dir = os.getenv("LOCAL_STORAGE_DIR", "./storage")
-        data_store = SimpleDataStore(storage_dir)
-
-        # If no input provided, use default configuration with recency sorting
-        actor_input_raw = {
-            "search_parameters": {
-                "sort_by": "recency",
-            },
-            "max_jobs": 10,
-            "debug_mode": True,
-        }
-
-        logger.info("Using default input configuration with recency sorting")
-
-        actor_input = ActorInput(**actor_input_raw)
+        actor_input, data_store = prepare_scraper_environment()
 
         logger.info("Starting Upwork job listing scraper")
-        if actor_input.debug_mode:
-            logger.info(f"Input parameters: {actor_input.model_dump_json(indent=2)}")
 
         # Initialize the service
         service = UpworkJobService(actor_input, data_store)
@@ -133,37 +188,7 @@ async def main() -> None:
         try:
             # Use async context manager for proper resource management
             async with service:
-                # Build search URLs from parameters
-                search_urls = actor_input.build_search_urls()
-                logger.info(f"Generated {len(search_urls)} search URLs")
-
-                if actor_input.debug_mode:
-                    for i, url in enumerate(search_urls, 1):
-                        logger.info(f"URL {i}: {url}")
-
-                logger.info("Starting job scraping...")
-
-                # Run the scraping - cancellation will propagate naturally
-                await service.run_scraping(search_urls)
-
-            # Log summary
-            total_jobs = len(service.comprehensive_jobs_found)
-            logger.info(f"Successfully processed {total_jobs} comprehensive jobs")
-
-            # Store summary statistics
-            summary = {
-                "total_jobs_found": total_jobs,
-                "search_urls_count": len(search_urls),
-                "extraction_type": "comprehensive",
-                "max_jobs_limit": actor_input.max_jobs,
-                "processed_at": datetime.now().isoformat(),
-                "input_parameters": actor_input.model_dump(),
-            }
-
-            await data_store.set_value("RUN_SUMMARY", summary)
-            logger.info(
-                f"Completed successfully - {total_jobs} comprehensive jobs processed"
-            )
+                await run_scraper_iteration(service, actor_input, data_store)
 
         except CloudflareDetectionException:
             logger.error("Cloudflare detection exception")
