@@ -1,0 +1,33 @@
+{
+  "collection": "api_accesses",
+  "document_id": "document",
+  "data": {
+    "api_keys": [
+      {
+        "key": "ak_live_1234567890abcdef1234567890abcdef",
+        "expiry_time": "2025-12-31T23:59:59Z",
+        "source": "dashboard",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "is_active": true
+      },
+      {
+        "key": "ak_test_abcdef1234567890abcdef1234567890",
+        "expiry_time": "2024-12-31T23:59:59Z",
+        "source": "api",
+        "created_at": "2024-06-01T00:00:00Z",
+        "updated_at": "2024-06-01T00:00:00Z",
+        "is_active": true
+      },
+      {
+        "key": "ak_dev_fedcba0987654321fedcba0987654321",
+        "expiry_time": "2024-06-30T23:59:59Z",
+        "source": "development",
+        "created_at": "2024-01-15T00:00:00Z",
+        "updated_at": "2024-01-15T00:00:00Z",
+        "is_active": true
+      }
+    ],
+    "updated_at": "2024-06-01T00:00:00Z"
+  }
+}
