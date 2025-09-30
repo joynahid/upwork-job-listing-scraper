@@ -542,13 +542,15 @@ func applyJobListFilters(job *JobSummaryRecord, opts JobListFilterOptions) bool 
 	}
 
 	if opts.BudgetMin != nil {
-		if job.FixedBudget == nil || job.FixedBudget.FixedAmount == nil || *job.FixedBudget.FixedAmount < *opts.BudgetMin {
+		// Only filter if job has a fixed budget that's below the minimum
+		if job.FixedBudget != nil && job.FixedBudget.FixedAmount != nil && *job.FixedBudget.FixedAmount < *opts.BudgetMin {
 			return false
 		}
 	}
 
 	if opts.BudgetMax != nil {
-		if job.FixedBudget == nil || job.FixedBudget.FixedAmount == nil || *job.FixedBudget.FixedAmount > *opts.BudgetMax {
+		// Only filter if job has a fixed budget that's above the maximum
+		if job.FixedBudget != nil && job.FixedBudget.FixedAmount != nil && *job.FixedBudget.FixedAmount > *opts.BudgetMax {
 			return false
 		}
 	}
@@ -931,13 +933,15 @@ func applyFilters(job *JobRecord, opts FilterOptions) bool {
 	}
 
 	if opts.BudgetMin != nil {
-		if job.Budget == nil || job.Budget.FixedAmount == nil || *job.Budget.FixedAmount < *opts.BudgetMin {
+		// Only filter if job has a fixed budget that's below the minimum
+		if job.Budget != nil && job.Budget.FixedAmount != nil && *job.Budget.FixedAmount < *opts.BudgetMin {
 			return false
 		}
 	}
 
 	if opts.BudgetMax != nil {
-		if job.Budget == nil || job.Budget.FixedAmount == nil || *job.Budget.FixedAmount > *opts.BudgetMax {
+		// Only filter if job has a fixed budget that's above the maximum
+		if job.Budget != nil && job.Budget.FixedAmount != nil && *job.Budget.FixedAmount > *opts.BudgetMax {
 			return false
 		}
 	}
@@ -1010,37 +1014,43 @@ func applyFilters(job *JobRecord, opts FilterOptions) bool {
 	}
 
 	if opts.BuyerTotalSpentMin != nil {
-		if job.Buyer == nil || job.Buyer.TotalSpent == nil || *job.Buyer.TotalSpent < *opts.BuyerTotalSpentMin {
+		// Only filter if buyer data exists and is below minimum
+		if job.Buyer != nil && job.Buyer.TotalSpent != nil && *job.Buyer.TotalSpent < *opts.BuyerTotalSpentMin {
 			return false
 		}
 	}
 
 	if opts.BuyerTotalSpentMax != nil {
-		if job.Buyer == nil || job.Buyer.TotalSpent == nil || *job.Buyer.TotalSpent > *opts.BuyerTotalSpentMax {
+		// Only filter if buyer data exists and is above maximum
+		if job.Buyer != nil && job.Buyer.TotalSpent != nil && *job.Buyer.TotalSpent > *opts.BuyerTotalSpentMax {
 			return false
 		}
 	}
 
 	if opts.BuyerTotalAssignmentsMin != nil {
-		if job.Buyer == nil || job.Buyer.TotalAssignments == nil || *job.Buyer.TotalAssignments < *opts.BuyerTotalAssignmentsMin {
+		// Only filter if buyer data exists and is below minimum
+		if job.Buyer != nil && job.Buyer.TotalAssignments != nil && *job.Buyer.TotalAssignments < *opts.BuyerTotalAssignmentsMin {
 			return false
 		}
 	}
 
 	if opts.BuyerTotalAssignmentsMax != nil {
-		if job.Buyer == nil || job.Buyer.TotalAssignments == nil || *job.Buyer.TotalAssignments > *opts.BuyerTotalAssignmentsMax {
+		// Only filter if buyer data exists and is above maximum
+		if job.Buyer != nil && job.Buyer.TotalAssignments != nil && *job.Buyer.TotalAssignments > *opts.BuyerTotalAssignmentsMax {
 			return false
 		}
 	}
 
 	if opts.BuyerTotalJobsWithHiresMin != nil {
-		if job.Buyer == nil || job.Buyer.TotalJobsWithHires == nil || *job.Buyer.TotalJobsWithHires < *opts.BuyerTotalJobsWithHiresMin {
+		// Only filter if buyer data exists and is below minimum
+		if job.Buyer != nil && job.Buyer.TotalJobsWithHires != nil && *job.Buyer.TotalJobsWithHires < *opts.BuyerTotalJobsWithHiresMin {
 			return false
 		}
 	}
 
 	if opts.BuyerTotalJobsWithHiresMax != nil {
-		if job.Buyer == nil || job.Buyer.TotalJobsWithHires == nil || *job.Buyer.TotalJobsWithHires > *opts.BuyerTotalJobsWithHiresMax {
+		// Only filter if buyer data exists and is above maximum
+		if job.Buyer != nil && job.Buyer.TotalJobsWithHires != nil && *job.Buyer.TotalJobsWithHires > *opts.BuyerTotalJobsWithHiresMax {
 			return false
 		}
 	}
@@ -1059,13 +1069,15 @@ func applyFilters(job *JobRecord, opts FilterOptions) bool {
 	}
 
 	if opts.NumberOfPositionsMin != nil {
-		if job.NumberOfPositions == nil || *job.NumberOfPositions < *opts.NumberOfPositionsMin {
+		// Only filter if number of positions exists and is below minimum
+		if job.NumberOfPositions != nil && *job.NumberOfPositions < *opts.NumberOfPositionsMin {
 			return false
 		}
 	}
 
 	if opts.NumberOfPositionsMax != nil {
-		if job.NumberOfPositions == nil || *job.NumberOfPositions > *opts.NumberOfPositionsMax {
+		// Only filter if number of positions exists and is above maximum
+		if job.NumberOfPositions != nil && *job.NumberOfPositions > *opts.NumberOfPositionsMax {
 			return false
 		}
 	}
