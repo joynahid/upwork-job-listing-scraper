@@ -29,7 +29,7 @@
 		"dataset": "./dataset_schema.json"
 	},
 	"environmentVariables": {
-		"API_ENDPOINT": "https://upworkjobscraperapi.nahidhq.com",
+		"API_ENDPOINT": "https://upworkapi.upfindr.app",
 		"API_KEY": "@apiKey"
 	}
 }
