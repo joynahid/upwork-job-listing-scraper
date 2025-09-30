@@ -157,3 +157,11 @@ Thumbs.db
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+
+# Go compiled binaries
+goapi/upwork-job-api
+goapi/migrate-flatten-fields
+goapi/cmd/*/main
+*.exe
+*.dll
+*.dylib
