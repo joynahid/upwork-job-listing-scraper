@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DefaultSortField     sortField = SortLastVisited
+	DefaultSortField     sortField = SortPublishTime
 	DefaultSortAscending bool      = false
 )
 

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"sort"
@@ -27,8 +26,6 @@ import (
 const (
 	defaultLimit   = 20
 	maxLimit       = 50
-	maxDocsCap     = 500
-	docsMultiplier = 8
 	requestTimeout = 20 * time.Second
 
 	// Cache TTLs
@@ -378,24 +375,64 @@ func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]Jo
 	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
-	iter := s.client.Collection(s.collectionName).Documents(ctx)
+	// Build Firestore query with native ordering
+	query := s.client.Collection(s.collectionName).Query
+
+	// Use Firestore native ordering with flattened fields
+	var orderField string
+	var orderDir firestore.Direction
+	needsInMemorySort := false
+
+	switch opts.SortField {
+	case SortPublishTime:
+		// Use flattened publishTime field at root level
+		orderField = "publishTime"
+		if opts.SortAscending {
+			orderDir = firestore.Asc
+		} else {
+			orderDir = firestore.Desc
+		}
+	case SortLastVisited:
+		orderField = "scrape_metadata.last_visited_at"
+		if opts.SortAscending {
+			orderDir = firestore.Asc
+		} else {
+			orderDir = firestore.Desc
+		}
+	case SortBudget:
+		// Use flattened budget fields, but still need in-memory sort to handle both fixed and hourly
+		orderField = "budgetAmount"
+		orderDir = firestore.Desc
+		needsInMemorySort = true
+	default:
+		// Default to publishTime descending for best user experience
+		orderField = "publishTime"
+		orderDir = firestore.Desc
+	}
+
+	query = query.OrderBy(orderField, orderDir)
+
+	// Calculate fetch limit
+	fetchLimit := (opts.Limit + opts.Offset) * 3
+	if needsInMemorySort {
+		fetchLimit = fetchLimit * 2 // Need more for budget sorting
+	}
+	if fetchLimit < 100 {
+		fetchLimit = 100
+	}
+	if fetchLimit > 500 {
+		fetchLimit = 500
+	}
+
+	query = query.Limit(fetchLimit)
+
+	iter := query.Documents(ctx)
 	defer iter.Stop()
 
-	lookedAt := 0
-	targetMatches := opts.Limit + opts.Offset
-	if targetMatches < opts.Limit {
-		targetMatches = opts.Limit
-	}
-	maxDocs := int(math.Min(
-		maxDocsCap,
-		math.Max(float64(targetMatches)*docsMultiplier, float64(targetMatches*2)),
-	))
-	results := make([]JobRecord, 0, targetMatches)
-	for {
-		if lookedAt >= maxDocs {
-			break
-		}
+	results := make([]JobRecord, 0, opts.Limit)
+	docCount := 0
 
+	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
 			break
@@ -406,7 +443,7 @@ func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]Jo
 			}
 			return nil, fmt.Errorf("firestore query failed: %w", err)
 		}
-		lookedAt++
+		docCount++
 
 		records, err := transformDocument(doc)
 		if err != nil {
@@ -424,7 +461,13 @@ func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]Jo
 		}
 	}
 
-	sortJobs(results, opts)
+	log.Printf("📊 Fetched %d docs from Firestore (ordered by %s %v), filtered to %d results", docCount, orderField, orderDir, len(results))
+
+	// In-memory sorting only if needed (budget sorting)
+	if needsInMemorySort {
+		sortJobs(results, opts)
+	}
+
 	if opts.Offset > 0 {
 		if opts.Offset >= len(results) {
 			return []JobRecord{}, nil
@@ -454,18 +497,54 @@ func (s *Server) queryJobList(requestCtx context.Context, opts JobListFilterOpti
 	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
-	iter := s.client.Collection(s.jobListCollection).Documents(ctx)
+	// Build Firestore query with native ordering
+	query := s.client.Collection(s.jobListCollection).Query
+
+	// Use Firestore native ordering - publishedOn and last_visited_at are at root level
+	var orderField string
+	var orderDir firestore.Direction
+
+	switch opts.SortField {
+	case SortPublishTime:
+		orderField = "publishedOn"
+		if opts.SortAscending {
+			orderDir = firestore.Asc
+		} else {
+			orderDir = firestore.Desc
+		}
+	case SortLastVisited:
+		orderField = "scrape_metadata.last_visited_at"
+		if opts.SortAscending {
+			orderDir = firestore.Asc
+		} else {
+			orderDir = firestore.Desc
+		}
+	default:
+		// Default to last_visited_at descending
+		orderField = "scrape_metadata.last_visited_at"
+		orderDir = firestore.Desc
+	}
+
+	query = query.OrderBy(orderField, orderDir)
+
+	// With native ordering, fetch 2-3x limit to account for filtering
+	fetchLimit := opts.Limit * 3
+	if fetchLimit < 100 {
+		fetchLimit = 100
+	}
+	if fetchLimit > 500 {
+		fetchLimit = 500
+	}
+
+	query = query.Limit(fetchLimit)
+
+	iter := query.Documents(ctx)
 	defer iter.Stop()
 
-	maxDocs := int(math.Min(maxDocsCap, math.Max(float64(opts.Limit)*docsMultiplier, float64(opts.Limit*2))))
-	results := make([]JobSummaryRecord, 0, maxDocs)
-	lookedAt := 0
+	results := make([]JobSummaryRecord, 0, opts.Limit)
+	docCount := 0
 
 	for {
-		if lookedAt >= maxDocs {
-			break
-		}
-
 		doc, err := iter.Next()
 		if err == iterator.Done {
 			break
@@ -476,7 +555,7 @@ func (s *Server) queryJobList(requestCtx context.Context, opts JobListFilterOpti
 			}
 			return nil, fmt.Errorf("firestore query failed: %w", err)
 		}
-		lookedAt++
+		docCount++
 
 		record, err := transformJobListDocument(doc)
 		if err != nil {
@@ -491,7 +570,9 @@ func (s *Server) queryJobList(requestCtx context.Context, opts JobListFilterOpti
 		results = append(results, *record)
 	}
 
-	sortJobSummaries(results, opts)
+	log.Printf("📊 Fetched %d docs from Firestore (ordered by %s %v), filtered to %d results", docCount, orderField, orderDir, len(results))
+
+	// Results are already ordered by Firestore, just apply limit
 	if len(results) > opts.Limit {
 		results = results[:opts.Limit]
 	}

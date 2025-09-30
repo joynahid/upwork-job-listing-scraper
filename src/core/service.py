@@ -357,6 +357,9 @@ class UpworkJobService:
                 "last_visited_by": "upwork_scraper",
             }
 
+            # Flatten key fields to root level for Firestore ordering
+            self._flatten_sortable_fields(detailed_job)
+
             # Save job details
             await self.save_individual_job_details(detailed_job)
             logger.debug(f"✅ Successfully saved job details for: {job_title}")
@@ -369,6 +372,56 @@ class UpworkJobService:
             logger.error(
                 "💥 Failed to extract job for %s: %s", job_title, exc, exc_info=True
             )
+
+    @staticmethod
+    def _flatten_sortable_fields(job_data: dict) -> None:
+        """
+        Flatten key fields from nested structures to root level for Firestore ordering.
+        Modifies job_data in place.
+        """
+        try:
+            # Extract nested job details
+            state = job_data.get("state", {})
+            job_details = state.get("jobDetails", {})
+            job_obj = job_details.get("job", {})
+
+            # Also try alternative path
+            if not job_obj:
+                job_state = state.get("job", {})
+                job_obj = job_state.get("job", {})
+
+            # Flatten publishTime (most important for sorting)
+            if "publishTime" in job_obj and job_obj["publishTime"]:
+                job_data["publishTime"] = job_obj["publishTime"]
+
+            # Flatten postedOn as fallback
+            if "postedOn" in job_obj and job_obj["postedOn"]:
+                job_data["postedOn"] = job_obj["postedOn"]
+
+            # Flatten createdOn
+            if "createdOn" in job_obj and job_obj["createdOn"]:
+                job_data["createdOn"] = job_obj["createdOn"]
+
+            # Flatten budget for potential budget sorting
+            if "budget" in job_obj and job_obj["budget"]:
+                budget = job_obj["budget"]
+                if isinstance(budget, dict) and "amount" in budget:
+                    job_data["budgetAmount"] = budget["amount"]
+
+            # Flatten amount (alternative budget field)
+            if "amount" in job_obj and job_obj["amount"]:
+                amount = job_obj["amount"]
+                if isinstance(amount, dict) and "amount" in amount:
+                    job_data["fixedAmount"] = amount["amount"]
+
+            # Flatten hourly budget for sorting
+            if "hourlyBudgetMax" in job_obj:
+                job_data["hourlyBudgetMax"] = job_obj["hourlyBudgetMax"]
+            if "hourlyBudgetMin" in job_obj:
+                job_data["hourlyBudgetMin"] = job_obj["hourlyBudgetMin"]
+
+        except Exception as exc:
+            logger.debug(f"Failed to flatten sortable fields: {exc}")
 
     @staticmethod
     def extract_nuxt_with_js_engine(html: str) -> dict | None:
