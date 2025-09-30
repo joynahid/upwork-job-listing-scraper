@@ -23,24 +23,35 @@ class JobProcessor:
     ) -> Dict[str, Any]:
         """Process a batch of jobs and return summary."""
         try:
+            # Log filter summary
+            if filters:
+                Actor.log.info(f"🎯 Active filters: {len(filters)} filter(s) applied")
+                for key, value in filters.items():
+                    Actor.log.info(f"   • {key}: {value}")
+            else:
+                Actor.log.info("🎯 No filters applied - fetching all available jobs")
+            
             # Fetch jobs from API
-            Actor.log.info("📥 Fetching jobs...")
+            Actor.log.info("📥 Fetching jobs from API...")
             api_response = await self.api_wrapper.fetch_jobs(max_jobs, filters)
 
             jobs = api_response.get("data", [])
             total_jobs_available = len(jobs)
 
-            Actor.log.info(f"📊 Fetched {total_jobs_available} jobs")
+            Actor.log.info(f"📊 API returned {total_jobs_available} jobs")
             Actor.log.info(
                 f"📊 Last updated: {api_response.get('last_updated', 'Unknown')}"
             )
 
             if not jobs:
-                Actor.log.info("ℹ️ No jobs available from API")
+                Actor.log.warning("⚠️ No jobs matched the filter criteria or API has no data")
+                Actor.log.info("💡 Try removing some filters or adjusting filter values")
                 return self._create_summary(
                     0, 0, max_jobs, api_response.get("last_updated")
                 )
 
+            Actor.log.info(f"✅ Found {total_jobs_available} jobs matching filters")
+            
             # Process jobs
             processed_count = await self._process_jobs_simple(
                 jobs, debug_mode, max_jobs
@@ -82,7 +93,8 @@ class JobProcessor:
         processed_count = 0
         total_jobs = len(jobs)
 
-        Actor.log.info(f"🚀 Processing {total_jobs} jobs from API")
+        Actor.log.info(f"🚀 Processing {total_jobs} jobs from API...")
+        Actor.log.info("=" * 60)
 
         total_jobs_to_process = min(max_jobs, total_jobs)
 

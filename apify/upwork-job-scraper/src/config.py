@@ -53,6 +53,20 @@ class ActorConfig:
             "buyerTotalAssignmentsMax",
             "buyerTotalJobsWithHiresMin",
             "buyerTotalJobsWithHiresMax",
+            "workload",
+            "isContractToHire",
+            "numberOfPositionsMin",
+            "numberOfPositionsMax",
+            "wasRenewed",
+            "premium",
+            "hideBudget",
+            "proposalsTier",
+            "minJobSuccessScore",
+            "minOdeskHours",
+            "prefEnglishSkill",
+            "risingTalent",
+            "shouldHavePortfolio",
+            "minHoursWeek",
             "sort",
         ]
         
@@ -95,4 +109,5 @@ class ActorConfig:
             Actor.log.info("📊 Configuration:")
             Actor.log.info(f"   Max Jobs: {self.max_jobs}")
             Actor.log.info(f"   Debug Mode: {self.debug_mode}")
+            Actor.log.info(f"   Raw Actor Input: {self.actor_input}")
             Actor.log.info(f"   Filters: {self.filters}")

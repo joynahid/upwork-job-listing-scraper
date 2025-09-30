@@ -65,6 +65,18 @@ class UpworkJobAPIWrapper:
                 "buyerTotalAssignmentsMax": "buyer.total_assignments_max",
                 "buyerTotalJobsWithHiresMin": "buyer.total_jobs_with_hires_min",
                 "buyerTotalJobsWithHiresMax": "buyer.total_jobs_with_hires_max",
+                "isContractToHire": "is_contract_to_hire",
+                "numberOfPositionsMin": "number_of_positions_min",
+                "numberOfPositionsMax": "number_of_positions_max",
+                "wasRenewed": "was_renewed",
+                "hideBudget": "hide_budget",
+                "proposalsTier": "proposals_tier",
+                "minJobSuccessScore": "min_job_success_score",
+                "minOdeskHours": "min_odesk_hours",
+                "prefEnglishSkill": "pref_english_skill",
+                "risingTalent": "rising_talent",
+                "shouldHavePortfolio": "should_have_portfolio",
+                "minHoursWeek": "min_hours_week",
             }
             
             for filter_key, filter_value in filters.items():
