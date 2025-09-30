@@ -128,6 +128,8 @@ definitions:
         type: string
       publish_time:
         type: string
+      publish_time_relative:
+        type: string
       qualifications:
         $ref: '#/definitions/server.JobQualifications'
       recno:
@@ -237,6 +239,8 @@ definitions:
         type: boolean
       proposals_tier:
         type: string
+      publish_time_relative:
+        type: string
       published_on:
         type: string
       qualifications:
@@ -277,9 +281,13 @@ definitions:
       success:
         type: boolean
     type: object
+host: localhost:8080
 info:
-  contact: {}
-  description: Provides filtered access to normalized Upwork job data stored in Firestore.
+  contact:
+    email: support@upworkjobapi.com
+    name: API Support
+  description: API for accessing normalized Upwork job listings with advanced filtering
+    capabilities. All endpoints require authentication via X-API-KEY header.
   title: Upwork Job API
   version: "1.0"
 paths:
@@ -396,6 +404,8 @@ paths:
           description: Unauthorized
           schema:
             $ref: '#/definitions/server.JobsResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Health check
       tags:
       - health
@@ -562,6 +572,9 @@ paths:
       summary: List jobs
       tags:
       - jobs
+schemes:
+- http
+- https
 securityDefinitions:
   ApiKeyAuth:
     in: header

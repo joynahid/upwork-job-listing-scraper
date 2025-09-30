@@ -9,7 +9,10 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "contact": {
+            "name": "API Support",
+            "email": "support@upworkjobapi.com"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -175,6 +178,11 @@ const docTemplate = `{
         },
         "/health": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Returns a 200 response when the API is up.",
                 "produces": [
                     "application/json"
@@ -643,6 +651,9 @@ const docTemplate = `{
                 "publish_time": {
                     "type": "string"
                 },
+                "publish_time_relative": {
+                    "type": "string"
+                },
                 "qualifications": {
                     "$ref": "#/definitions/server.JobQualifications"
                 },
@@ -809,6 +820,9 @@ const docTemplate = `{
                 "proposals_tier": {
                     "type": "string"
                 },
+                "publish_time_relative": {
+                    "type": "string"
+                },
                 "published_on": {
                     "type": "string"
                 },
@@ -883,11 +897,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "",
+	Host:             "localhost:8080",
 	BasePath:         "",
-	Schemes:          []string{},
+	Schemes:          []string{"http", "https"},
 	Title:            "Upwork Job API",
-	Description:      "Provides filtered access to normalized Upwork job data stored in Firestore.",
+	Description:      "API for accessing normalized Upwork job listings with advanced filtering capabilities. All endpoints require authentication via X-API-KEY header.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

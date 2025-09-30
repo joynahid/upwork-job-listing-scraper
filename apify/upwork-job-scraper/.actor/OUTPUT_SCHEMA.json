@@ -1,0 +1,415 @@
+{
+  "title": "Upwork Job Data",
+  "description": "Structured Upwork job listing data matching the Go API schema",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "id": {
+      "title": "Job ID",
+      "type": "string",
+      "description": "Unique job identifier (uid/ciphertext)",
+      "example": "~021839456789012345678"
+    },
+    "title": {
+      "title": "Job Title",
+      "type": "string",
+      "description": "Job posting title",
+      "example": "Python Developer Needed for Web Scraping Project"
+    },
+    "description": {
+      "title": "Description",
+      "type": "string",
+      "description": "Full job description text"
+    },
+    "job_type": {
+      "title": "Job Type",
+      "type": "string",
+      "description": "Type of job posting",
+      "enum": ["hourly", "fixed-price"],
+      "example": "hourly"
+    },
+    "status": {
+      "title": "Job Status",
+      "type": "string",
+      "description": "Current job status",
+      "enum": ["open", "closed"],
+      "example": "open"
+    },
+    "contractor_tier": {
+      "title": "Experience Level",
+      "type": "string",
+      "description": "Required contractor experience level",
+      "enum": ["entry", "intermediate", "expert"],
+      "example": "intermediate"
+    },
+    "posted_on": {
+      "title": "Posted On",
+      "type": "string",
+      "description": "Job posting date (ISO 8601)",
+      "format": "date-time",
+      "example": "2025-09-30T12:00:00Z"
+    },
+    "created_on": {
+      "title": "Created On",
+      "type": "string",
+      "description": "Job creation date (ISO 8601)",
+      "format": "date-time"
+    },
+    "publish_time": {
+      "title": "Publish Time",
+      "type": "string",
+      "description": "Job publish time (ISO 8601) - primary sort field",
+      "format": "date-time",
+      "example": "2025-09-30T12:00:00Z"
+    },
+    "publish_time_relative": {
+      "title": "Publish Time Relative",
+      "type": "string",
+      "description": "Human-readable relative time (e.g., '2 hours ago')",
+      "example": "2 hours ago"
+    },
+    "category": {
+      "title": "Category",
+      "type": "object",
+      "description": "Job category information",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Category name",
+          "example": "Web, Mobile & Software Dev"
+        },
+        "slug": {
+          "type": "string",
+          "description": "Category URL slug"
+        },
+        "group": {
+          "type": "string",
+          "description": "Category group name"
+        },
+        "group_slug": {
+          "type": "string",
+          "description": "Category group URL slug"
+        }
+      }
+    },
+    "budget": {
+      "title": "Budget",
+      "type": "object",
+      "description": "Fixed budget information",
+      "properties": {
+        "fixed_amount": {
+          "type": "number",
+          "description": "Fixed project budget",
+          "example": 500
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency code",
+          "example": "USD"
+        }
+      }
+    },
+    "hourly_budget": {
+      "title": "Hourly Budget",
+      "type": "object",
+      "description": "Hourly rate range",
+      "properties": {
+        "min": {
+          "type": "number",
+          "description": "Minimum hourly rate",
+          "example": 20
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum hourly rate",
+          "example": 40
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency code",
+          "example": "USD"
+        }
+      }
+    },
+    "buyer": {
+      "title": "Buyer/Client",
+      "type": "object",
+      "description": "Client information",
+      "properties": {
+        "payment_verified": {
+          "type": "boolean",
+          "description": "Whether client's payment method is verified"
+        },
+        "country": {
+          "type": "string",
+          "description": "Client country code",
+          "example": "US"
+        },
+        "city": {
+          "type": "string",
+          "description": "Client city"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Client timezone"
+        },
+        "total_spent": {
+          "type": "number",
+          "description": "Total amount spent on Upwork"
+        },
+        "total_assignments": {
+          "type": "integer",
+          "description": "Total number of assignments"
+        },
+        "total_jobs_with_hires": {
+          "type": "integer",
+          "description": "Number of jobs with hires"
+        },
+        "active_assignments": {
+          "type": "integer",
+          "description": "Current active assignments"
+        },
+        "feedback_count": {
+          "type": "integer",
+          "description": "Number of feedback reviews"
+        },
+        "total_hours": {
+          "type": "number",
+          "description": "Total hours contracted"
+        },
+        "score": {
+          "type": "number",
+          "description": "Client rating score"
+        },
+        "company_industry": {
+          "type": "string",
+          "description": "Company industry"
+        },
+        "company_size": {
+          "type": "integer",
+          "description": "Company size"
+        },
+        "contract_date": {
+          "type": "string",
+          "description": "Member since date (ISO 8601)",
+          "format": "date-time"
+        },
+        "open_jobs_count": {
+          "type": "integer",
+          "description": "Number of currently open jobs"
+        }
+      }
+    },
+    "tags": {
+      "title": "Tags",
+      "type": "array",
+      "description": "Job tags/annotations",
+      "items": {
+        "type": "string"
+      },
+      "example": ["python", "web-scraping", "automation"]
+    },
+    "skills": {
+      "title": "Skills",
+      "type": "array",
+      "description": "Required skills",
+      "items": {
+        "type": "string"
+      },
+      "example": ["Python", "Beautiful Soup", "Selenium"]
+    },
+    "url": {
+      "title": "Job URL",
+      "type": "string",
+      "description": "Direct link to job posting",
+      "format": "uri",
+      "example": "https://www.upwork.com/jobs/~021839456789012345678"
+    },
+    "ciphertext": {
+      "title": "Ciphertext",
+      "type": "string",
+      "description": "Job ciphertext identifier",
+      "example": "~021839456789012345678"
+    },
+    "last_visited_at": {
+      "title": "Last Visited At",
+      "type": "string",
+      "description": "When this job was last scraped (ISO 8601)",
+      "format": "date-time"
+    },
+    "duration_label": {
+      "title": "Duration",
+      "type": "string",
+      "description": "Project duration estimate",
+      "example": "1 to 3 months"
+    },
+    "engagement": {
+      "title": "Engagement",
+      "type": "string",
+      "description": "Engagement type",
+      "example": "30+ hrs/week"
+    },
+    "workload": {
+      "title": "Workload",
+      "type": "string",
+      "description": "Expected workload",
+      "example": "More than 30 hrs/week"
+    },
+    "client_activity": {
+      "title": "Client Activity",
+      "type": "object",
+      "description": "Client's activity on this job",
+      "properties": {
+        "total_applicants": {
+          "type": "integer",
+          "description": "Total number of applicants"
+        },
+        "total_hired": {
+          "type": "integer",
+          "description": "Number of freelancers hired"
+        },
+        "total_invited_to_interview": {
+          "type": "integer",
+          "description": "Number invited to interview"
+        },
+        "unanswered_invites": {
+          "type": "integer",
+          "description": "Unanswered invitations"
+        },
+        "invitations_sent": {
+          "type": "integer",
+          "description": "Total invitations sent"
+        },
+        "last_buyer_activity": {
+          "type": "string",
+          "description": "Last activity timestamp"
+        }
+      }
+    },
+    "location": {
+      "title": "Job Location",
+      "type": "object",
+      "description": "Geographic requirements",
+      "properties": {
+        "country": {
+          "type": "string",
+          "description": "Country code"
+        },
+        "city": {
+          "type": "string",
+          "description": "City name"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Timezone"
+        }
+      }
+    },
+    "is_private": {
+      "title": "Is Private",
+      "type": "boolean",
+      "description": "Whether job details are private/restricted"
+    },
+    "privacy_reason": {
+      "title": "Privacy Reason",
+      "type": "string",
+      "description": "Reason for privacy restriction"
+    },
+    "is_contract_to_hire": {
+      "title": "Contract to Hire",
+      "type": "boolean",
+      "description": "Whether job offers contract-to-hire option"
+    },
+    "number_of_positions": {
+      "title": "Number of Positions",
+      "type": "integer",
+      "description": "Number of positions to fill"
+    },
+    "was_renewed": {
+      "title": "Was Renewed",
+      "type": "boolean",
+      "description": "Whether job posting was renewed"
+    },
+    "premium": {
+      "title": "Premium",
+      "type": "boolean",
+      "description": "Whether this is a premium job posting"
+    },
+    "hide_budget": {
+      "title": "Hide Budget",
+      "type": "boolean",
+      "description": "Whether budget is hidden"
+    },
+    "proposals_tier": {
+      "title": "Proposals Tier",
+      "type": "string",
+      "description": "Proposals tier level",
+      "example": "50+"
+    },
+    "tier_text": {
+      "title": "Tier Text",
+      "type": "string",
+      "description": "Tier description text"
+    },
+    "qualifications": {
+      "title": "Qualifications",
+      "type": "object",
+      "description": "Required qualifications",
+      "properties": {
+        "min_job_success_score": {
+          "type": "integer",
+          "description": "Minimum job success score (0-100)"
+        },
+        "min_odesk_hours": {
+          "type": "integer",
+          "description": "Minimum hours on Upwork"
+        },
+        "pref_english_skill": {
+          "type": "integer",
+          "description": "Preferred English skill level (0-4)"
+        },
+        "rising_talent": {
+          "type": "boolean",
+          "description": "Rising talent badge required"
+        },
+        "should_have_portfolio": {
+          "type": "boolean",
+          "description": "Portfolio required"
+        },
+        "min_hours_week": {
+          "type": "number",
+          "description": "Minimum hours per week"
+        }
+      }
+    },
+    "weekly_retainer_budget": {
+      "title": "Weekly Retainer Budget",
+      "type": "object",
+      "description": "Weekly retainer budget",
+      "properties": {
+        "fixed_amount": {
+          "type": "number",
+          "description": "Weekly retainer amount"
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency code"
+        }
+      }
+    },
+    "occupations": {
+      "title": "Occupations",
+      "type": "array",
+      "description": "Preferred occupations/specializations",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recno": {
+      "title": "Record Number",
+      "type": "integer",
+      "description": "Upwork internal record number"
+    }
+  },
+  "required": ["id"]
+}

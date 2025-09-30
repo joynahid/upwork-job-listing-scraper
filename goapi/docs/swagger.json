@@ -1,11 +1,19 @@
 {
+    "schemes": [
+        "http",
+        "https"
+    ],
     "swagger": "2.0",
     "info": {
-        "description": "Provides filtered access to normalized Upwork job data stored in Firestore.",
+        "description": "API for accessing normalized Upwork job listings with advanced filtering capabilities. All endpoints require authentication via X-API-KEY header.",
         "title": "Upwork Job API",
-        "contact": {},
+        "contact": {
+            "name": "API Support",
+            "email": "support@upworkjobapi.com"
+        },
         "version": "1.0"
     },
+    "host": "localhost:8080",
     "paths": {
         "/api-keys/refresh-cache": {
             "post": {
@@ -167,6 +175,11 @@
         },
         "/health": {
             "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Returns a 200 response when the API is up.",
                 "produces": [
                     "application/json"
@@ -635,6 +648,9 @@
                 "publish_time": {
                     "type": "string"
                 },
+                "publish_time_relative": {
+                    "type": "string"
+                },
                 "qualifications": {
                     "$ref": "#/definitions/server.JobQualifications"
                 },
@@ -799,6 +815,9 @@
                     "type": "boolean"
                 },
                 "proposals_tier": {
+                    "type": "string"
+                },
+                "publish_time_relative": {
                     "type": "string"
                 },
                 "published_on": {

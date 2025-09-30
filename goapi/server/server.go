@@ -196,6 +196,7 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 // @Produce json
 // @Success 200 {object} JobsResponse
 // @Failure 401 {object} JobsResponse
+// @Security ApiKeyAuth
 // @Router /health [get]
 func (s *Server) handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, JobsResponse{

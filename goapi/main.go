@@ -10,7 +10,11 @@ import (
 
 // @title Upwork Job API
 // @version 1.0
-// @description Provides filtered access to normalized Upwork job data stored in Firestore.
+// @description API for accessing normalized Upwork job listings with advanced filtering capabilities. All endpoints require authentication via X-API-KEY header.
+// @contact.name API Support
+// @contact.email support@upworkjobapi.com
+// @host localhost:8080
+// @schemes http https
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name X-API-KEY
