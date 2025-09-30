@@ -28,9 +28,6 @@
 	"storages": {
 		"dataset": "./dataset_schema.json"
 	},
-	"storageDescriptions": {
-		"dataset": "./OUTPUT_SCHEMA.json"
-	},
 	"environmentVariables": {
 		"API_ENDPOINT": "https://upworkjobscraperapi.nahidhq.com",
 		"API_KEY": "@apiKey"
