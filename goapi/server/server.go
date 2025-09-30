@@ -232,6 +232,14 @@ func (s *Server) handleHealth(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /jobs [get]
 func (s *Server) handleJobs(c *gin.Context) {
+	// Validate query parameters
+	queryParams, err := ValidateAndBindJobsQuery(c)
+	if err != nil {
+		validationResp := FormatValidationErrors(err)
+		c.JSON(http.StatusBadRequest, validationResp)
+		return
+	}
+
 	// Generate cache key from query parameters
 	cacheKey := generateCacheKey("jobs", c.Request.URL.Query())
 
@@ -248,7 +256,8 @@ func (s *Server) handleJobs(c *gin.Context) {
 	s.redisClient.Incr(c.Request.Context(), "cache:stats:misses")
 	log.Printf("💔 Cache MISS for /jobs (key: %s)", cacheKey[len(cacheKey)-16:])
 
-	opts, err := parseFilterOptions(c.Request.URL.Query())
+	// Convert validated params to FilterOptions
+	opts, err := convertToFilterOptions(queryParams)
 	if err != nil {
 		respondError(c, http.StatusBadRequest, err.Error())
 		return
@@ -308,6 +317,14 @@ func (s *Server) handleJobs(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /job-list [get]
 func (s *Server) handleJobList(c *gin.Context) {
+	// Validate query parameters
+	queryParams, err := ValidateAndBindJobListQuery(c)
+	if err != nil {
+		validationResp := FormatValidationErrors(err)
+		c.JSON(http.StatusBadRequest, validationResp)
+		return
+	}
+
 	// Generate cache key from query parameters
 	cacheKey := generateCacheKey("job-list", c.Request.URL.Query())
 
@@ -324,7 +341,8 @@ func (s *Server) handleJobList(c *gin.Context) {
 	s.redisClient.Incr(c.Request.Context(), "cache:stats:misses")
 	log.Printf("💔 Cache MISS for /job-list (key: %s)", cacheKey[len(cacheKey)-16:])
 
-	opts, err := parseJobListFilterOptions(c.Request.URL.Query())
+	// Convert validated params to JobListFilterOptions
+	opts, err := convertToJobListFilterOptions(queryParams)
 	if err != nil {
 		respondError(c, http.StatusBadRequest, err.Error())
 		return

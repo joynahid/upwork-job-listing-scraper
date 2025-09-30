@@ -6,6 +6,9 @@ import (
 
 	"upwork-job-api/docs"
 	"upwork-job-api/server"
+
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
 // @title Upwork Job API
@@ -20,6 +23,12 @@ import (
 // @name X-API-KEY
 // @BasePath /
 func main() {
+	// Register custom validators
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		server.RegisterCustomValidators(v)
+		log.Println("✅ Custom validators registered")
+	}
+
 	srv, err := server.NewServer()
 	if err != nil {
 		log.Fatalf("failed to initialize server: %v", err)
