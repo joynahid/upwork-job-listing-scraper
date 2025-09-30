@@ -573,7 +573,7 @@ func sortJobSummaries(jobs []JobSummaryRecord, opts JobListFilterOptions) {
 		b := jobs[j]
 
 		switch opts.SortField {
-		case SortPostedOn:
+		case SortPublishTime:
 			aTime := timeOrZero(a.PublishedOn)
 			bTime := timeOrZero(b.PublishedOn)
 
@@ -1152,9 +1152,9 @@ func sortJobs(jobs []JobRecord, opts FilterOptions) {
 		b := jobs[j]
 
 		switch opts.SortField {
-		case SortPostedOn:
-			aTime := timeOrZero(a.PostedOn)
-			bTime := timeOrZero(b.PostedOn)
+		case SortPublishTime:
+			aTime := timeOrZero(a.PublishTime)
+			bTime := timeOrZero(b.PublishTime)
 
 			// Handle nil/zero times - always sort them to the end regardless of direction
 			aZero := aTime.IsZero()

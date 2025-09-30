@@ -348,11 +348,11 @@ func parseFilterOptions(values url.Values) (FilterOptions, error) {
 
 	if raw := strings.ToLower(strings.TrimSpace(firstQuery(values, "sort"))); raw != "" {
 		switch raw {
-		case "posted_on_asc":
-			opts.SortField = SortPostedOn
+		case "publish_time_asc":
+			opts.SortField = SortPublishTime
 			opts.SortAscending = true
-		case "posted_on_desc":
-			opts.SortField = SortPostedOn
+		case "publish_time_desc":
+			opts.SortField = SortPublishTime
 		case "last_visited_asc":
 			opts.SortField = SortLastVisited
 			opts.SortAscending = true
@@ -448,11 +448,11 @@ func formatFilterOptions(opts FilterOptions) string {
 	}
 
 	sortLabel := "last_visited_desc"
-	if opts.SortField == SortPostedOn {
+	if opts.SortField == SortPublishTime {
 		if opts.SortAscending {
-			sortLabel = "posted_on_asc"
+			sortLabel = "publish_time_asc"
 		} else {
-			sortLabel = "posted_on_desc"
+			sortLabel = "publish_time_desc"
 		}
 	} else if opts.SortField == SortBudget {
 		if opts.SortAscending {

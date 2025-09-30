@@ -9,7 +9,7 @@ type sortField string
 
 const (
 	SortLastVisited sortField = "last_visited"
-	SortPostedOn    sortField = "posted_on"
+	SortPublishTime sortField = "publish_time"
 	SortBudget      sortField = "budget"
 )
 
