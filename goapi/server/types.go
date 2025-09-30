@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"strings"
 	"time"
 )
@@ -65,91 +64,142 @@ var (
 
 // JobRecord represents normalized job data prior to serialization.
 type JobRecord struct {
-	ID             string
-	Title          string
-	Description    string
-	JobType        *int
-	Status         *int
-	ContractorTier *int
-	Category       *CategoryInfo
-	PostedOn       *time.Time
-	Budget         *BudgetInfo
-	Buyer          *BuyerInfo
-	Tags           []string
-	URL            string
-	LastVisitedAt  *time.Time
-	DurationLabel  string
-	Engagement     string
-	Skills         []string
-	HourlyInfo     *HourlyBudget
-	ClientActivity *ClientActivity
-	Location       *JobLocation
-	IsPrivate      bool
-	PrivacyReason  string
+	ID                    string
+	Title                 string
+	Description           string
+	JobType               *int
+	Status                *int
+	ContractorTier        *int
+	Category              *CategoryInfo
+	PostedOn              *time.Time
+	CreatedOn             *time.Time
+	PublishTime           *time.Time
+	Budget                *BudgetInfo
+	Buyer                 *BuyerInfo
+	Tags                  []string
+	URL                   string
+	LastVisitedAt         *time.Time
+	DurationLabel         string
+	Engagement            string
+	Skills                []string
+	HourlyInfo            *HourlyBudget
+	ClientActivity        *ClientActivity
+	Location              *JobLocation
+	IsPrivate             bool
+	PrivacyReason         string
+	Ciphertext            string
+	Workload              string
+	IsContractToHire      *bool
+	NumberOfPositions     *int
+	WasRenewed            *bool
+	Premium               *bool
+	HideBudget            *bool
+	ProposalsTier         string
+	TierText              string
+	Qualifications        *JobQualifications
+	WeeklyRetainerBudget  *BudgetInfo
+	Occupations           []string
+	Recno                 *int64
 }
 
 type JobSummaryRecord struct {
-	ID            string
-	Title         string
-	Description   string
-	JobType       *int
-	DurationLabel string
-	Engagement    string
-	Skills        []string
-	HourlyInfo    *HourlyBudget
-	FixedBudget   *BudgetInfo
-	WeeklyBudget  *BudgetInfo
-	Client        *JobSummaryClient
-	Ciphertext    string
-	URL           string
-	PublishedOn   *time.Time
-	RenewedOn     *time.Time
-	LastVisitedAt *time.Time
+	ID                   string
+	Title                string
+	Description          string
+	JobType              *int
+	DurationLabel        string
+	Engagement           string
+	Skills               []string
+	HourlyInfo           *HourlyBudget
+	FixedBudget          *BudgetInfo
+	WeeklyBudget         *BudgetInfo
+	Client               *JobSummaryClient
+	Ciphertext           string
+	URL                  string
+	PublishedOn          *time.Time
+	RenewedOn            *time.Time
+	LastVisitedAt        *time.Time
+	Workload             string
+	IsContractToHire     *bool
+	NumberOfPositions    *int
+	WasRenewed           *bool
+	Premium              *bool
+	HideBudget           *bool
+	ProposalsTier        string
+	Qualifications       *JobQualifications
+	WeeklyRetainerBudget *BudgetInfo
+	Occupations          []string
+	Recno                *int64
 }
 
 // JobDTO is the API response schema.
 type JobDTO struct {
-	ID               string          `json:"id"`
-	Title            string          `json:"title,omitempty"`
-	Description      string          `json:"description,omitempty"`
-	JobType          string          `json:"job_type,omitempty"`
-	Status           string          `json:"status,omitempty"`
-	ContractorTier   string          `json:"contractor_tier,omitempty"`
-	PostedOn         string          `json:"posted_on,omitempty"`
-	Category         *CategoryInfo   `json:"category,omitempty"`
-	Budget           *BudgetInfo     `json:"budget,omitempty"`
-	Buyer            *BuyerInfo      `json:"buyer,omitempty"`
-	Tags             []string        `json:"tags,omitempty"`
-	URL              string          `json:"url,omitempty"`
-	LastVisitedAt    string          `json:"last_visited_at,omitempty"`
-	PostedOnRelative string          `json:"posted_on_relative,omitempty"`
-	DurationLabel    string          `json:"duration_label,omitempty"`
-	Engagement       string          `json:"engagement,omitempty"`
-	Skills           []string        `json:"skills,omitempty"`
-	HourlyInfo       *HourlyBudget   `json:"hourly_budget,omitempty"`
-	ClientActivity   *ClientActivity `json:"client_activity,omitempty"`
-	Location         *JobLocation    `json:"location,omitempty"`
-	IsPrivate        bool            `json:"is_private,omitempty"`
-	PrivacyReason    string          `json:"privacy_reason,omitempty"`
+	ID                   string             `json:"id"`
+	Title                string             `json:"title,omitempty"`
+	Description          string             `json:"description,omitempty"`
+	JobType              string             `json:"job_type,omitempty"`
+	Status               string             `json:"status,omitempty"`
+	ContractorTier       string             `json:"contractor_tier,omitempty"`
+	PostedOn             string             `json:"posted_on,omitempty"`
+	CreatedOn            string             `json:"created_on,omitempty"`
+	PublishTime          string             `json:"publish_time,omitempty"`
+	Category             *CategoryInfo      `json:"category,omitempty"`
+	Budget               *BudgetInfo        `json:"budget,omitempty"`
+	Buyer                *BuyerDTO          `json:"buyer,omitempty"`
+	Tags                 []string           `json:"tags,omitempty"`
+	URL                  string             `json:"url,omitempty"`
+	LastVisitedAt        string             `json:"last_visited_at,omitempty"`
+	DurationLabel        string             `json:"duration_label,omitempty"`
+	Engagement           string             `json:"engagement,omitempty"`
+	Skills               []string           `json:"skills,omitempty"`
+	HourlyInfo           *HourlyBudget      `json:"hourly_budget,omitempty"`
+	ClientActivity       *ClientActivity    `json:"client_activity,omitempty"`
+	Location             *JobLocation       `json:"location,omitempty"`
+	IsPrivate            bool               `json:"is_private,omitempty"`
+	PrivacyReason        string             `json:"privacy_reason,omitempty"`
+	Ciphertext           string             `json:"ciphertext,omitempty"`
+	Workload             string             `json:"workload,omitempty"`
+	IsContractToHire     *bool              `json:"is_contract_to_hire,omitempty"`
+	NumberOfPositions    *int               `json:"number_of_positions,omitempty"`
+	WasRenewed           *bool              `json:"was_renewed,omitempty"`
+	Premium              *bool              `json:"premium,omitempty"`
+	HideBudget           *bool              `json:"hide_budget,omitempty"`
+	ProposalsTier        string             `json:"proposals_tier,omitempty"`
+	TierText             string             `json:"tier_text,omitempty"`
+	Qualifications       *JobQualifications `json:"qualifications,omitempty"`
+	WeeklyRetainerBudget *BudgetInfo        `json:"weekly_retainer_budget,omitempty"`
+	Occupations          []string           `json:"occupations,omitempty"`
+	Recno                *int64             `json:"recno,omitempty"`
 }
 
 type JobSummaryDTO struct {
-	ID            string            `json:"id"`
-	Title         string            `json:"title,omitempty"`
-	Description   string            `json:"description,omitempty"`
-	JobType       string            `json:"job_type,omitempty"`
-	DurationLabel string            `json:"duration_label,omitempty"`
-	Engagement    string            `json:"engagement,omitempty"`
-	Skills        []string          `json:"skills,omitempty"`
-	HourlyInfo    *HourlyBudget     `json:"hourly_budget,omitempty"`
-	FixedBudget   *BudgetInfo       `json:"fixed_budget,omitempty"`
-	WeeklyBudget  *BudgetInfo       `json:"weekly_budget,omitempty"`
-	Client        *JobSummaryClient `json:"client,omitempty"`
-	Ciphertext    string            `json:"ciphertext,omitempty"`
-	URL           string            `json:"url,omitempty"`
-	PublishedOn   string            `json:"published_on,omitempty"`
-	RenewedOn     string            `json:"renewed_on,omitempty"`
-	LastVisitedAt string            `json:"last_visited_at,omitempty"`
+	ID                   string             `json:"id"`
+	Title                string             `json:"title,omitempty"`
+	Description          string             `json:"description,omitempty"`
+	JobType              string             `json:"job_type,omitempty"`
+	DurationLabel        string             `json:"duration_label,omitempty"`
+	Engagement           string             `json:"engagement,omitempty"`
+	Skills               []string           `json:"skills,omitempty"`
+	HourlyInfo           *HourlyBudget      `json:"hourly_budget,omitempty"`
+	FixedBudget          *BudgetInfo        `json:"fixed_budget,omitempty"`
+	WeeklyBudget         *BudgetInfo        `json:"weekly_budget,omitempty"`
+	Client               *JobSummaryClient  `json:"client,omitempty"`
+	Ciphertext           string             `json:"ciphertext,omitempty"`
+	URL                  string             `json:"url,omitempty"`
+	PublishedOn          string             `json:"published_on,omitempty"`
+	RenewedOn            string             `json:"renewed_on,omitempty"`
+	LastVisitedAt        string             `json:"last_visited_at,omitempty"`
+	Workload             string             `json:"workload,omitempty"`
+	IsContractToHire     *bool              `json:"is_contract_to_hire,omitempty"`
+	NumberOfPositions    *int               `json:"number_of_positions,omitempty"`
+	WasRenewed           *bool              `json:"was_renewed,omitempty"`
+	Premium              *bool              `json:"premium,omitempty"`
+	HideBudget           *bool              `json:"hide_budget,omitempty"`
+	ProposalsTier        string             `json:"proposals_tier,omitempty"`
+	Qualifications       *JobQualifications `json:"qualifications,omitempty"`
+	WeeklyRetainerBudget *BudgetInfo        `json:"weekly_retainer_budget,omitempty"`
+	Occupations          []string           `json:"occupations,omitempty"`
+	Recno                *int64             `json:"recno,omitempty"`
 }
 
 // BudgetInfo describes job budget metadata.
@@ -191,13 +241,70 @@ type CategoryInfo struct {
 
 // BuyerInfo captures client/company details.
 type BuyerInfo struct {
-	PaymentVerified    *bool    `json:"payment_verified,omitempty"`
-	Country            string   `json:"country,omitempty"`
-	City               string   `json:"city,omitempty"`
-	Timezone           string   `json:"timezone,omitempty"`
-	TotalSpent         *float64 `json:"total_spent,omitempty"`
-	TotalAssignments   *int     `json:"total_assignments,omitempty"`
-	TotalJobsWithHires *int     `json:"total_jobs_with_hires,omitempty"`
+	PaymentVerified      *bool
+	Country              string
+	City                 string
+	Timezone             string
+	TotalSpent           *float64
+	TotalAssignments     *int
+	TotalJobsWithHires   *int
+	ActiveAssignments    *int
+	FeedbackCount        *int
+	TotalHours           *float64
+	Score                *float64
+	CompanyIndustry      string
+	CompanySize          *int
+	ContractDate         *time.Time
+	OpenJobsCount        *int
+}
+
+// BuyerDTO is the API response version of BuyerInfo
+type BuyerDTO struct {
+	PaymentVerified      *bool    `json:"payment_verified,omitempty"`
+	Country              string   `json:"country,omitempty"`
+	City                 string   `json:"city,omitempty"`
+	Timezone             string   `json:"timezone,omitempty"`
+	TotalSpent           *float64 `json:"total_spent,omitempty"`
+	TotalAssignments     *int     `json:"total_assignments,omitempty"`
+	TotalJobsWithHires   *int     `json:"total_jobs_with_hires,omitempty"`
+	ActiveAssignments    *int     `json:"active_assignments,omitempty"`
+	FeedbackCount        *int     `json:"feedback_count,omitempty"`
+	TotalHours           *float64 `json:"total_hours,omitempty"`
+	Score                *float64 `json:"score,omitempty"`
+	CompanyIndustry      string   `json:"company_industry,omitempty"`
+	CompanySize          *int     `json:"company_size,omitempty"`
+	ContractDate         string   `json:"contract_date,omitempty"`
+	OpenJobsCount        *int     `json:"open_jobs_count,omitempty"`
+}
+
+// ToDTO converts BuyerInfo to BuyerDTO
+func (b *BuyerInfo) ToDTO() *BuyerDTO {
+	if b == nil {
+		return nil
+	}
+
+	dto := &BuyerDTO{
+		PaymentVerified:    b.PaymentVerified,
+		Country:            b.Country,
+		City:               b.City,
+		Timezone:           b.Timezone,
+		TotalSpent:         b.TotalSpent,
+		TotalAssignments:   b.TotalAssignments,
+		TotalJobsWithHires: b.TotalJobsWithHires,
+		ActiveAssignments:  b.ActiveAssignments,
+		FeedbackCount:      b.FeedbackCount,
+		TotalHours:         b.TotalHours,
+		Score:              b.Score,
+		CompanyIndustry:    b.CompanyIndustry,
+		CompanySize:        b.CompanySize,
+		OpenJobsCount:      b.OpenJobsCount,
+	}
+
+	if b.ContractDate != nil {
+		dto.ContractDate = b.ContractDate.UTC().Format(time.RFC3339)
+	}
+
+	return dto
 }
 
 type ClientActivity struct {
@@ -220,100 +327,67 @@ type JobSummaryClient struct {
 	Country         string `json:"country,omitempty"`
 }
 
+// JobQualifications represents job qualification requirements
+type JobQualifications struct {
+	MinJobSuccessScore  *int     `json:"min_job_success_score,omitempty"`
+	MinOdeskHours       *int     `json:"min_odesk_hours,omitempty"`
+	PrefEnglishSkill    *int     `json:"pref_english_skill,omitempty"`
+	RisingTalent        *bool    `json:"rising_talent,omitempty"`
+	ShouldHavePortfolio *bool    `json:"should_have_portfolio,omitempty"`
+	MinHoursWeek        *float64 `json:"min_hours_week,omitempty"`
+}
+
 // ToDTO converts a JobRecord into response form.
 func (job JobRecord) ToDTO() JobDTO {
 	dto := JobDTO{
-		ID:             job.ID,
-		Title:          job.Title,
-		Description:    job.Description,
-		JobType:        normalizeJobType(job.JobType),
-		Status:         normalizeJobStatus(job.Status),
-		ContractorTier: normalizeContractorTier(job.ContractorTier),
-		Category:       job.Category,
-		Budget:         job.Budget,
-		Buyer:          job.Buyer,
-		Tags:           job.Tags,
-		URL:            job.URL,
-		DurationLabel:  job.DurationLabel,
-		Engagement:     job.Engagement,
-		Skills:         job.Skills,
-		HourlyInfo:     job.HourlyInfo,
-		ClientActivity: job.ClientActivity,
-		Location:       job.Location,
-		IsPrivate:      job.IsPrivate,
-		PrivacyReason:  job.PrivacyReason,
+		ID:                   job.ID,
+		Title:                job.Title,
+		Description:          job.Description,
+		JobType:              normalizeJobType(job.JobType),
+		Status:               normalizeJobStatus(job.Status),
+		ContractorTier:       normalizeContractorTier(job.ContractorTier),
+		Category:             job.Category,
+		Budget:               job.Budget,
+		Buyer:                job.Buyer.ToDTO(),
+		Tags:                 job.Tags,
+		URL:                  job.URL,
+		DurationLabel:        job.DurationLabel,
+		Engagement:           job.Engagement,
+		Skills:               job.Skills,
+		HourlyInfo:           job.HourlyInfo,
+		ClientActivity:       job.ClientActivity,
+		Location:             job.Location,
+		IsPrivate:            job.IsPrivate,
+		PrivacyReason:        job.PrivacyReason,
+		Ciphertext:           job.Ciphertext,
+		Workload:             job.Workload,
+		IsContractToHire:     job.IsContractToHire,
+		NumberOfPositions:    job.NumberOfPositions,
+		WasRenewed:           job.WasRenewed,
+		Premium:              job.Premium,
+		HideBudget:           job.HideBudget,
+		ProposalsTier:        job.ProposalsTier,
+		TierText:             job.TierText,
+		Qualifications:       job.Qualifications,
+		WeeklyRetainerBudget: job.WeeklyRetainerBudget,
+		Occupations:          job.Occupations,
+		Recno:                job.Recno,
 	}
 
 	if job.PostedOn != nil {
-		posted := job.PostedOn.UTC()
-		dto.PostedOn = posted.Format(time.RFC3339)
-		dto.PostedOnRelative = formatRelativeTime(posted, time.Now().UTC())
+		dto.PostedOn = job.PostedOn.UTC().Format(time.RFC3339)
+	}
+	if job.CreatedOn != nil {
+		dto.CreatedOn = job.CreatedOn.UTC().Format(time.RFC3339)
+	}
+	if job.PublishTime != nil {
+		dto.PublishTime = job.PublishTime.UTC().Format(time.RFC3339)
 	}
 	if job.LastVisitedAt != nil {
 		dto.LastVisitedAt = job.LastVisitedAt.UTC().Format(time.RFC3339)
 	}
 
 	return dto
-}
-
-func formatRelativeTime(target time.Time, reference time.Time) string {
-	if target.IsZero() {
-		return ""
-	}
-
-	if reference.IsZero() {
-		reference = time.Now().UTC()
-	}
-
-	if target.After(reference) {
-		return "just now"
-	}
-
-	diff := reference.Sub(target)
-
-	seconds := int(diff.Seconds())
-	if seconds < 1 {
-		return "just now"
-	}
-
-	minutes := int(diff.Minutes())
-	hours := int(diff.Hours())
-	days := int(diff.Hours() / 24)
-	weeks := days / 7
-	months := days / 30
-
-	switch {
-	case seconds < 60:
-		return relativeLabel(seconds, "second")
-	case minutes < 60:
-		return relativeLabel(minutes, "minute")
-	case hours < 24:
-		return relativeLabel(hours, "hour")
-	case days < 7:
-		return relativeLabel(days, "day")
-	case weeks < 5:
-		if weeks < 1 {
-			weeks = 1
-		}
-		return relativeLabel(weeks, "week")
-	case months >= 1:
-		if months < 1 {
-			months = 1
-		}
-		return relativeLabel(months, "month")
-	default:
-		return relativeLabel(days, "day")
-	}
-}
-
-func relativeLabel(value int, unit string) string {
-	if value < 1 {
-		value = 1
-	}
-	if value == 1 {
-		return fmt.Sprintf("1 %s ago", unit)
-	}
-	return fmt.Sprintf("%d %ss ago", value, unit)
 }
 
 func canonicalEnumKey(value string) string {
@@ -407,19 +481,30 @@ func normalizeContractorTier(code *int) string {
 // ToDTO converts a JobSummaryRecord into response form.
 func (job JobSummaryRecord) ToDTO() JobSummaryDTO {
 	dto := JobSummaryDTO{
-		ID:            job.ID,
-		Title:         job.Title,
-		Description:   job.Description,
-		JobType:       normalizeJobType(job.JobType),
-		DurationLabel: job.DurationLabel,
-		Engagement:    job.Engagement,
-		Skills:        job.Skills,
-		HourlyInfo:    job.HourlyInfo,
-		FixedBudget:   job.FixedBudget,
-		WeeklyBudget:  job.WeeklyBudget,
-		Client:        job.Client,
-		Ciphertext:    job.Ciphertext,
-		URL:           job.URL,
+		ID:                   job.ID,
+		Title:                job.Title,
+		Description:          job.Description,
+		JobType:              normalizeJobType(job.JobType),
+		DurationLabel:        job.DurationLabel,
+		Engagement:           job.Engagement,
+		Skills:               job.Skills,
+		HourlyInfo:           job.HourlyInfo,
+		FixedBudget:          job.FixedBudget,
+		WeeklyBudget:         job.WeeklyBudget,
+		Client:               job.Client,
+		Ciphertext:           job.Ciphertext,
+		URL:                  job.URL,
+		Workload:             job.Workload,
+		IsContractToHire:     job.IsContractToHire,
+		NumberOfPositions:    job.NumberOfPositions,
+		WasRenewed:           job.WasRenewed,
+		Premium:              job.Premium,
+		HideBudget:           job.HideBudget,
+		ProposalsTier:        job.ProposalsTier,
+		Qualifications:       job.Qualifications,
+		WeeklyRetainerBudget: job.WeeklyRetainerBudget,
+		Occupations:          job.Occupations,
+		Recno:                job.Recno,
 	}
 
 	if job.PublishedOn != nil {

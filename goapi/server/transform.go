@@ -173,28 +173,87 @@ func buildJobRecord(jobMap map[string]interface{}, buyerMap map[string]interface
 	duration := getString(jobMap, "durationLabel")
 	engagement := getString(jobMap, "engagement")
 
+	// Extract new fields
+	ciphertext := getString(jobMap, "ciphertext")
+	workload := getString(jobMap, "workload")
+	proposalsTier := getString(jobMap, "proposalsTier")
+	tierText := getString(jobMap, "tierText")
+
+	createdOn := firstTime(jobMap, []string{"createdOn"})
+	publishTime := firstTime(jobMap, []string{"publishTime"})
+
+	var isContractToHire *bool
+	if val, ok := extractBool(jobMap, "contractToHire"); ok {
+		isContractToHire = &val
+	}
+
+	var numberOfPositions *int
+	if val, ok := extractInt(jobMap, "numberOfPositionsToHire"); ok {
+		numberOfPositions = &val
+	}
+
+	var wasRenewed *bool
+	if val, ok := extractBool(jobMap, "wasRenewed"); ok {
+		wasRenewed = &val
+	}
+
+	var premium *bool
+	if val, ok := extractBool(jobMap, "premium"); ok {
+		premium = &val
+	}
+
+	var hideBudget *bool
+	if val, ok := extractBool(jobMap, "hideBudget"); ok {
+		hideBudget = &val
+	}
+
+	var recno *int64
+	if val, ok := extractInt(jobMap, "recno"); ok {
+		recno64 := int64(val)
+		recno = &recno64
+	}
+
+	qualifications := buildQualifications(getMap(jobMap, "qualifications"))
+	weeklyRetainerBudget := buildWeeklyRetainerBudget(jobMap)
+	occupations := extractOccupations(jobMap)
+
 	return &JobRecord{
-		ID:             id,
-		Title:          title,
-		Description:    description,
-		JobType:        jobType,
-		Status:         status,
-		ContractorTier: contractorTier,
-		Category:       category,
-		PostedOn:       postedOn,
-		Budget:         budget,
-		Buyer:          buyer,
-		Tags:           tags,
-		URL:            url,
-		LastVisitedAt:  lastVisited,
-		Skills:         skills,
-		HourlyInfo:     hourly,
-		ClientActivity: clientActivity,
-		Location:       location,
-		DurationLabel:  duration,
-		Engagement:     engagement,
-		IsPrivate:      isPrivate,
-		PrivacyReason:  privacyReason,
+		ID:                   id,
+		Title:                title,
+		Description:          description,
+		JobType:              jobType,
+		Status:               status,
+		ContractorTier:       contractorTier,
+		Category:             category,
+		PostedOn:             postedOn,
+		CreatedOn:            createdOn,
+		PublishTime:          publishTime,
+		Budget:               budget,
+		Buyer:                buyer,
+		Tags:                 tags,
+		URL:                  url,
+		LastVisitedAt:        lastVisited,
+		Skills:               skills,
+		HourlyInfo:           hourly,
+		ClientActivity:       clientActivity,
+		Location:             location,
+		DurationLabel:        duration,
+		Engagement:           engagement,
+		IsPrivate:            isPrivate,
+		PrivacyReason:        privacyReason,
+		Ciphertext:           ciphertext,
+		Workload:             workload,
+		IsContractToHire:     isContractToHire,
+		NumberOfPositions:    numberOfPositions,
+		WasRenewed:           wasRenewed,
+		Premium:              premium,
+		HideBudget:           hideBudget,
+		ProposalsTier:        proposalsTier,
+		TierText:             tierText,
+		Qualifications:       qualifications,
+		WeeklyRetainerBudget: weeklyRetainerBudget,
+		Occupations:          occupations,
+		Recno:                recno,
 	}
 }
 
@@ -324,23 +383,73 @@ func transformJobListDocument(doc *firestore.DocumentSnapshot) (*JobSummaryRecor
 	renewed := firstTime(raw, []string{"renewedOn"})
 	lastVisited := firstTime(raw, []string{"scrape_metadata", "last_visited_at"})
 
+	// Extract new fields
+	workload := getString(raw, "workload")
+	proposalsTier := getString(raw, "proposalsTier")
+
+	var isContractToHire *bool
+	if val, ok := extractBool(raw, "contractToHire"); ok {
+		isContractToHire = &val
+	}
+
+	var numberOfPositions *int
+	if val, ok := extractInt(raw, "numberOfPositionsToHire"); ok {
+		numberOfPositions = &val
+	}
+
+	var wasRenewed *bool
+	if val, ok := extractBool(raw, "wasRenewed"); ok {
+		wasRenewed = &val
+	}
+
+	var premium *bool
+	if val, ok := extractBool(raw, "premium"); ok {
+		premium = &val
+	}
+
+	var hideBudget *bool
+	if val, ok := extractBool(raw, "hideBudget"); ok {
+		hideBudget = &val
+	}
+
+	var recno *int64
+	if val, ok := extractInt(raw, "recno"); ok {
+		recno64 := int64(val)
+		recno = &recno64
+	}
+
+	qualifications := buildQualifications(getMap(raw, "qualifications"))
+	weeklyRetainerBudget := buildWeeklyRetainerBudget(raw)
+	occupations := extractOccupations(raw)
+
 	return &JobSummaryRecord{
-		ID:            id,
-		Title:         title,
-		Description:   description,
-		JobType:       jobType,
-		DurationLabel: duration,
-		Engagement:    engagement,
-		Skills:        skills,
-		HourlyInfo:    hourly,
-		FixedBudget:   fixedBudget,
-		WeeklyBudget:  weeklyBudget,
-		Client:        client,
-		Ciphertext:    cipher,
-		URL:           url,
-		PublishedOn:   published,
-		RenewedOn:     renewed,
-		LastVisitedAt: lastVisited,
+		ID:                   id,
+		Title:                title,
+		Description:          description,
+		JobType:              jobType,
+		DurationLabel:        duration,
+		Engagement:           engagement,
+		Skills:               skills,
+		HourlyInfo:           hourly,
+		FixedBudget:          fixedBudget,
+		WeeklyBudget:         weeklyBudget,
+		Client:               client,
+		Ciphertext:           cipher,
+		URL:                  url,
+		PublishedOn:          published,
+		RenewedOn:            renewed,
+		LastVisitedAt:        lastVisited,
+		Workload:             workload,
+		IsContractToHire:     isContractToHire,
+		NumberOfPositions:    numberOfPositions,
+		WasRenewed:           wasRenewed,
+		Premium:              premium,
+		HideBudget:           hideBudget,
+		ProposalsTier:        proposalsTier,
+		Qualifications:       qualifications,
+		WeeklyRetainerBudget: weeklyRetainerBudget,
+		Occupations:          occupations,
+		Recno:                recno,
 	}, nil
 }
 
@@ -562,9 +671,45 @@ func buildBuyer(buyer map[string]interface{}) *BuyerInfo {
 		if val, ok := extractInt(stats, "totalJobsWithHires"); ok {
 			info.TotalJobsWithHires = &val
 		}
+		if val, ok := extractInt(stats, "activeAssignmentsCount"); ok {
+			info.ActiveAssignments = &val
+		}
+		if val, ok := extractInt(stats, "feedbackCount"); ok {
+			info.FeedbackCount = &val
+		}
+		if val, ok := extractFloat(stats, "hoursCount"); ok {
+			info.TotalHours = ptrFloat(val)
+		}
+		if val, ok := extractFloat(stats, "score"); ok {
+			info.Score = ptrFloat(val)
+		}
 	}
 
-	if info.PaymentVerified == nil && info.Country == "" && info.City == "" && info.Timezone == "" && info.TotalSpent == nil && info.TotalAssignments == nil && info.TotalJobsWithHires == nil {
+	if company := getMap(buyer, "company"); company != nil {
+		if industry := getString(company, "industry"); industry != "" {
+			info.CompanyIndustry = industry
+		}
+		if size, ok := extractInt(company, "size"); ok {
+			info.CompanySize = &size
+		}
+		if contractDate := getString(company, "contractDate"); contractDate != "" {
+			if parsed := firstTime(company, []string{"contractDate"}); parsed != nil {
+				info.ContractDate = parsed
+			}
+		}
+	}
+
+	if jobs := getMap(buyer, "jobs"); jobs != nil {
+		if openCount, ok := extractInt(jobs, "openCount"); ok {
+			info.OpenJobsCount = &openCount
+		}
+	}
+
+	if info.PaymentVerified == nil && info.Country == "" && info.City == "" && info.Timezone == "" &&
+		info.TotalSpent == nil && info.TotalAssignments == nil && info.TotalJobsWithHires == nil &&
+		info.ActiveAssignments == nil && info.FeedbackCount == nil && info.TotalHours == nil &&
+		info.Score == nil && info.CompanyIndustry == "" && info.CompanySize == nil &&
+		info.ContractDate == nil && info.OpenJobsCount == nil {
 		return nil
 	}
 
@@ -651,6 +796,79 @@ func extractSkillLabels(root map[string]interface{}, keys ...string) []string {
 	}
 
 	return labels
+}
+
+func buildQualifications(quals map[string]interface{}) *JobQualifications {
+	if quals == nil {
+		return nil
+	}
+
+	result := &JobQualifications{}
+	hasAny := false
+
+	if val, ok := extractInt(quals, "minJobSuccessScore"); ok {
+		result.MinJobSuccessScore = &val
+		hasAny = true
+	}
+	if val, ok := extractInt(quals, "minOdeskHours"); ok {
+		result.MinOdeskHours = &val
+		hasAny = true
+	}
+	if val, ok := extractInt(quals, "prefEnglishSkill"); ok {
+		result.PrefEnglishSkill = &val
+		hasAny = true
+	}
+	if val, ok := extractBool(quals, "risingTalent"); ok {
+		result.RisingTalent = &val
+		hasAny = true
+	}
+	if val, ok := extractBool(quals, "shouldHavePortfolio"); ok {
+		result.ShouldHavePortfolio = &val
+		hasAny = true
+	}
+	if val, ok := extractFloat(quals, "minHoursWeek"); ok {
+		result.MinHoursWeek = &val
+		hasAny = true
+	}
+
+	if !hasAny {
+		return nil
+	}
+	return result
+}
+
+func buildWeeklyRetainerBudget(job map[string]interface{}) *BudgetInfo {
+	retainer := getMap(job, "weeklyRetainerBudget")
+	if retainer == nil {
+		return nil
+	}
+
+	if amount, ok := extractFloat(retainer, "amount"); ok {
+		return &BudgetInfo{
+			FixedAmount: &amount,
+			Currency:    getString(retainer, "currencyCode"),
+		}
+	}
+	return nil
+}
+
+func extractOccupations(job map[string]interface{}) []string {
+	occList := extractMapSlice(job, "occupations", "occupation")
+	if len(occList) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(occList))
+	for _, occ := range occList {
+		if name := getString(occ, "prefLabel"); name != "" {
+			result = append(result, name)
+		}
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 func applyFilters(job *JobRecord, opts FilterOptions) bool {
@@ -823,6 +1041,100 @@ func applyFilters(job *JobRecord, opts FilterOptions) bool {
 
 	if opts.BuyerTotalJobsWithHiresMax != nil {
 		if job.Buyer == nil || job.Buyer.TotalJobsWithHires == nil || *job.Buyer.TotalJobsWithHires > *opts.BuyerTotalJobsWithHiresMax {
+			return false
+		}
+	}
+
+	// New filters
+	if opts.Workload != "" {
+		if job.Workload == "" || !strings.EqualFold(job.Workload, opts.Workload) {
+			return false
+		}
+	}
+
+	if opts.IsContractToHire != nil {
+		if job.IsContractToHire == nil || *job.IsContractToHire != *opts.IsContractToHire {
+			return false
+		}
+	}
+
+	if opts.NumberOfPositionsMin != nil {
+		if job.NumberOfPositions == nil || *job.NumberOfPositions < *opts.NumberOfPositionsMin {
+			return false
+		}
+	}
+
+	if opts.NumberOfPositionsMax != nil {
+		if job.NumberOfPositions == nil || *job.NumberOfPositions > *opts.NumberOfPositionsMax {
+			return false
+		}
+	}
+
+	if opts.WasRenewed != nil {
+		if job.WasRenewed == nil || *job.WasRenewed != *opts.WasRenewed {
+			return false
+		}
+	}
+
+	if opts.Premium != nil {
+		if job.Premium == nil || *job.Premium != *opts.Premium {
+			return false
+		}
+	}
+
+	if opts.HideBudget != nil {
+		if job.HideBudget == nil || *job.HideBudget != *opts.HideBudget {
+			return false
+		}
+	}
+
+	if opts.ProposalsTier != "" {
+		if job.ProposalsTier == "" || !strings.EqualFold(job.ProposalsTier, opts.ProposalsTier) {
+			return false
+		}
+	}
+
+	// Qualification filters
+	if job.Qualifications != nil {
+		if opts.MinJobSuccessScore != nil {
+			if job.Qualifications.MinJobSuccessScore == nil || *job.Qualifications.MinJobSuccessScore > *opts.MinJobSuccessScore {
+				return false
+			}
+		}
+
+		if opts.MinOdeskHours != nil {
+			if job.Qualifications.MinOdeskHours == nil || *job.Qualifications.MinOdeskHours > *opts.MinOdeskHours {
+				return false
+			}
+		}
+
+		if opts.PrefEnglishSkill != nil {
+			if job.Qualifications.PrefEnglishSkill == nil || *job.Qualifications.PrefEnglishSkill > *opts.PrefEnglishSkill {
+				return false
+			}
+		}
+
+		if opts.RisingTalent != nil {
+			if job.Qualifications.RisingTalent == nil || *job.Qualifications.RisingTalent != *opts.RisingTalent {
+				return false
+			}
+		}
+
+		if opts.ShouldHavePortfolio != nil {
+			if job.Qualifications.ShouldHavePortfolio == nil || *job.Qualifications.ShouldHavePortfolio != *opts.ShouldHavePortfolio {
+				return false
+			}
+		}
+
+		if opts.MinHoursWeek != nil {
+			if job.Qualifications.MinHoursWeek == nil || *job.Qualifications.MinHoursWeek > *opts.MinHoursWeek {
+				return false
+			}
+		}
+	} else {
+		// If qualifications is nil but filter requires qualification checks, exclude the job
+		if opts.MinJobSuccessScore != nil || opts.MinOdeskHours != nil || opts.PrefEnglishSkill != nil ||
+			opts.RisingTalent != nil || opts.ShouldHavePortfolio != nil || opts.MinHoursWeek != nil {
 			return false
 		}
 	}

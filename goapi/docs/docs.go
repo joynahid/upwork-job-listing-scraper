@@ -15,6 +15,164 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api-keys/refresh-cache": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Forces a refresh of the API keys cache from Firestore",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "api-keys"
+                ],
+                "summary": "Refresh API keys cache",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api-keys/{key}/cache": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Removes a specific API key from the cache",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "api-keys"
+                ],
+                "summary": "Clear API key cache",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API key to clear from cache",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cache/clear": {
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Removes all cached responses (does not affect API key cache)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cache"
+                ],
+                "summary": "Clear all response caches",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cache/stats": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Returns cache hit/miss ratio and performance metrics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cache"
+                ],
+                "summary": "Get cache statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "Returns a 200 response when the API is up.",
@@ -300,23 +458,47 @@ const docTemplate = `{
                 }
             }
         },
-        "server.BuyerInfo": {
+        "server.BuyerDTO": {
             "type": "object",
             "properties": {
+                "active_assignments": {
+                    "type": "integer"
+                },
                 "city": {
+                    "type": "string"
+                },
+                "company_industry": {
+                    "type": "string"
+                },
+                "company_size": {
+                    "type": "integer"
+                },
+                "contract_date": {
                     "type": "string"
                 },
                 "country": {
                     "type": "string"
                 },
+                "feedback_count": {
+                    "type": "integer"
+                },
+                "open_jobs_count": {
+                    "type": "integer"
+                },
                 "payment_verified": {
                     "type": "boolean"
+                },
+                "score": {
+                    "type": "number"
                 },
                 "timezone": {
                     "type": "string"
                 },
                 "total_assignments": {
                     "type": "integer"
+                },
+                "total_hours": {
+                    "type": "number"
                 },
                 "total_jobs_with_hires": {
                     "type": "integer"
@@ -387,16 +569,22 @@ const docTemplate = `{
                     "$ref": "#/definitions/server.BudgetInfo"
                 },
                 "buyer": {
-                    "$ref": "#/definitions/server.BuyerInfo"
+                    "$ref": "#/definitions/server.BuyerDTO"
                 },
                 "category": {
                     "$ref": "#/definitions/server.CategoryInfo"
+                },
+                "ciphertext": {
+                    "type": "string"
                 },
                 "client_activity": {
                     "$ref": "#/definitions/server.ClientActivity"
                 },
                 "contractor_tier": {
-                    "type": "integer"
+                    "type": "string"
+                },
+                "created_on": {
+                    "type": "string"
                 },
                 "description": {
                     "type": "string"
@@ -407,17 +595,23 @@ const docTemplate = `{
                 "engagement": {
                     "type": "string"
                 },
+                "hide_budget": {
+                    "type": "boolean"
+                },
                 "hourly_budget": {
                     "$ref": "#/definitions/server.HourlyBudget"
                 },
                 "id": {
                     "type": "string"
                 },
+                "is_contract_to_hire": {
+                    "type": "boolean"
+                },
                 "is_private": {
                     "type": "boolean"
                 },
                 "job_type": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "last_visited_at": {
                     "type": "string"
@@ -425,11 +619,35 @@ const docTemplate = `{
                 "location": {
                     "$ref": "#/definitions/server.JobLocation"
                 },
+                "number_of_positions": {
+                    "type": "integer"
+                },
+                "occupations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "posted_on": {
                     "type": "string"
                 },
+                "premium": {
+                    "type": "boolean"
+                },
                 "privacy_reason": {
                     "type": "string"
+                },
+                "proposals_tier": {
+                    "type": "string"
+                },
+                "publish_time": {
+                    "type": "string"
+                },
+                "qualifications": {
+                    "$ref": "#/definitions/server.JobQualifications"
+                },
+                "recno": {
+                    "type": "integer"
                 },
                 "skills": {
                     "type": "array",
@@ -438,7 +656,7 @@ const docTemplate = `{
                     }
                 },
                 "status": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "tags": {
                     "type": "array",
@@ -446,10 +664,22 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "tier_text": {
+                    "type": "string"
+                },
                 "title": {
                     "type": "string"
                 },
                 "url": {
+                    "type": "string"
+                },
+                "was_renewed": {
+                    "type": "boolean"
+                },
+                "weekly_retainer_budget": {
+                    "$ref": "#/definitions/server.BudgetInfo"
+                },
+                "workload": {
                     "type": "string"
                 }
             }
@@ -491,6 +721,29 @@ const docTemplate = `{
                 }
             }
         },
+        "server.JobQualifications": {
+            "type": "object",
+            "properties": {
+                "min_hours_week": {
+                    "type": "number"
+                },
+                "min_job_success_score": {
+                    "type": "integer"
+                },
+                "min_odesk_hours": {
+                    "type": "integer"
+                },
+                "pref_english_skill": {
+                    "type": "integer"
+                },
+                "rising_talent": {
+                    "type": "boolean"
+                },
+                "should_have_portfolio": {
+                    "type": "boolean"
+                }
+            }
+        },
         "server.JobSummaryClient": {
             "type": "object",
             "properties": {
@@ -523,20 +776,47 @@ const docTemplate = `{
                 "fixed_budget": {
                     "$ref": "#/definitions/server.BudgetInfo"
                 },
+                "hide_budget": {
+                    "type": "boolean"
+                },
                 "hourly_budget": {
                     "$ref": "#/definitions/server.HourlyBudget"
                 },
                 "id": {
                     "type": "string"
                 },
+                "is_contract_to_hire": {
+                    "type": "boolean"
+                },
                 "job_type": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "last_visited_at": {
                     "type": "string"
                 },
+                "number_of_positions": {
+                    "type": "integer"
+                },
+                "occupations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "premium": {
+                    "type": "boolean"
+                },
+                "proposals_tier": {
+                    "type": "string"
+                },
                 "published_on": {
                     "type": "string"
+                },
+                "qualifications": {
+                    "$ref": "#/definitions/server.JobQualifications"
+                },
+                "recno": {
+                    "type": "integer"
                 },
                 "renewed_on": {
                     "type": "string"
@@ -553,8 +833,17 @@ const docTemplate = `{
                 "url": {
                     "type": "string"
                 },
+                "was_renewed": {
+                    "type": "boolean"
+                },
                 "weekly_budget": {
                     "$ref": "#/definitions/server.BudgetInfo"
+                },
+                "weekly_retainer_budget": {
+                    "$ref": "#/definitions/server.BudgetInfo"
+                },
+                "workload": {
+                    "type": "string"
                 }
             }
         },

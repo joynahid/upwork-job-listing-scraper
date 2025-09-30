@@ -40,6 +40,20 @@ type FilterOptions struct {
 	BuyerTotalAssignmentsMax   *int
 	BuyerTotalJobsWithHiresMin *int
 	BuyerTotalJobsWithHiresMax *int
+	Workload                   string
+	IsContractToHire           *bool
+	NumberOfPositionsMin       *int
+	NumberOfPositionsMax       *int
+	WasRenewed                 *bool
+	Premium                    *bool
+	HideBudget                 *bool
+	ProposalsTier              string
+	MinJobSuccessScore         *int
+	MinOdeskHours              *int
+	PrefEnglishSkill           *int
+	RisingTalent               *bool
+	ShouldHavePortfolio        *bool
+	MinHoursWeek               *float64
 	SortField                  sortField
 	SortAscending              bool
 }
@@ -230,6 +244,106 @@ func parseFilterOptions(values url.Values) (FilterOptions, error) {
 			return opts, fmt.Errorf("invalid buyer.total_jobs_with_hires_max parameter")
 		}
 		opts.BuyerTotalJobsWithHiresMax = &value
+	}
+
+	opts.Workload = strings.TrimSpace(firstQuery(values, "workload"))
+
+	if raw := firstQuery(values, "is_contract_to_hire"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid is_contract_to_hire parameter")
+		}
+		opts.IsContractToHire = &parsed
+	}
+
+	if raw := firstQuery(values, "number_of_positions_min"); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 0 {
+			return opts, fmt.Errorf("invalid number_of_positions_min parameter")
+		}
+		opts.NumberOfPositionsMin = &value
+	}
+
+	if raw := firstQuery(values, "number_of_positions_max"); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 0 {
+			return opts, fmt.Errorf("invalid number_of_positions_max parameter")
+		}
+		opts.NumberOfPositionsMax = &value
+	}
+
+	if raw := firstQuery(values, "was_renewed"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid was_renewed parameter")
+		}
+		opts.WasRenewed = &parsed
+	}
+
+	if raw := firstQuery(values, "premium"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid premium parameter")
+		}
+		opts.Premium = &parsed
+	}
+
+	if raw := firstQuery(values, "hide_budget"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid hide_budget parameter")
+		}
+		opts.HideBudget = &parsed
+	}
+
+	opts.ProposalsTier = strings.TrimSpace(firstQuery(values, "proposals_tier"))
+
+	if raw := firstQuery(values, "min_job_success_score"); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 0 || value > 100 {
+			return opts, fmt.Errorf("invalid min_job_success_score parameter")
+		}
+		opts.MinJobSuccessScore = &value
+	}
+
+	if raw := firstQuery(values, "min_odesk_hours"); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 0 {
+			return opts, fmt.Errorf("invalid min_odesk_hours parameter")
+		}
+		opts.MinOdeskHours = &value
+	}
+
+	if raw := firstQuery(values, "pref_english_skill"); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 0 || value > 4 {
+			return opts, fmt.Errorf("invalid pref_english_skill parameter (must be 0-4)")
+		}
+		opts.PrefEnglishSkill = &value
+	}
+
+	if raw := firstQuery(values, "rising_talent"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid rising_talent parameter")
+		}
+		opts.RisingTalent = &parsed
+	}
+
+	if raw := firstQuery(values, "should_have_portfolio"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			return opts, fmt.Errorf("invalid should_have_portfolio parameter")
+		}
+		opts.ShouldHavePortfolio = &parsed
+	}
+
+	if raw := firstQuery(values, "min_hours_week"); raw != "" {
+		value, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			return opts, fmt.Errorf("invalid min_hours_week parameter")
+		}
+		opts.MinHoursWeek = &value
 	}
 
 	if raw := strings.ToLower(strings.TrimSpace(firstQuery(values, "sort"))); raw != "" {

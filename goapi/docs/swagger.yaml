@@ -6,18 +6,34 @@ definitions:
       fixed_amount:
         type: number
     type: object
-  server.BuyerInfo:
+  server.BuyerDTO:
     properties:
+      active_assignments:
+        type: integer
       city:
+        type: string
+      company_industry:
+        type: string
+      company_size:
+        type: integer
+      contract_date:
         type: string
       country:
         type: string
+      feedback_count:
+        type: integer
+      open_jobs_count:
+        type: integer
       payment_verified:
         type: boolean
+      score:
+        type: number
       timezone:
         type: string
       total_assignments:
         type: integer
+      total_hours:
+        type: number
       total_jobs_with_hires:
         type: integer
       total_spent:
@@ -63,48 +79,80 @@ definitions:
       budget:
         $ref: '#/definitions/server.BudgetInfo'
       buyer:
-        $ref: '#/definitions/server.BuyerInfo'
+        $ref: '#/definitions/server.BuyerDTO'
       category:
         $ref: '#/definitions/server.CategoryInfo'
+      ciphertext:
+        type: string
       client_activity:
         $ref: '#/definitions/server.ClientActivity'
       contractor_tier:
-        type: integer
+        type: string
+      created_on:
+        type: string
       description:
         type: string
       duration_label:
         type: string
       engagement:
         type: string
+      hide_budget:
+        type: boolean
       hourly_budget:
         $ref: '#/definitions/server.HourlyBudget'
       id:
         type: string
+      is_contract_to_hire:
+        type: boolean
       is_private:
         type: boolean
       job_type:
-        type: integer
+        type: string
       last_visited_at:
         type: string
       location:
         $ref: '#/definitions/server.JobLocation'
+      number_of_positions:
+        type: integer
+      occupations:
+        items:
+          type: string
+        type: array
       posted_on:
         type: string
+      premium:
+        type: boolean
       privacy_reason:
         type: string
+      proposals_tier:
+        type: string
+      publish_time:
+        type: string
+      qualifications:
+        $ref: '#/definitions/server.JobQualifications'
+      recno:
+        type: integer
       skills:
         items:
           type: string
         type: array
       status:
-        type: integer
+        type: string
       tags:
         items:
           type: string
         type: array
+      tier_text:
+        type: string
       title:
         type: string
       url:
+        type: string
+      was_renewed:
+        type: boolean
+      weekly_retainer_budget:
+        $ref: '#/definitions/server.BudgetInfo'
+      workload:
         type: string
     type: object
   server.JobListResponse:
@@ -131,6 +179,21 @@ definitions:
       timezone:
         type: string
     type: object
+  server.JobQualifications:
+    properties:
+      min_hours_week:
+        type: number
+      min_job_success_score:
+        type: integer
+      min_odesk_hours:
+        type: integer
+      pref_english_skill:
+        type: integer
+      rising_talent:
+        type: boolean
+      should_have_portfolio:
+        type: boolean
+    type: object
   server.JobSummaryClient:
     properties:
       country:
@@ -152,16 +215,34 @@ definitions:
         type: string
       fixed_budget:
         $ref: '#/definitions/server.BudgetInfo'
+      hide_budget:
+        type: boolean
       hourly_budget:
         $ref: '#/definitions/server.HourlyBudget'
       id:
         type: string
+      is_contract_to_hire:
+        type: boolean
       job_type:
-        type: integer
+        type: string
       last_visited_at:
+        type: string
+      number_of_positions:
+        type: integer
+      occupations:
+        items:
+          type: string
+        type: array
+      premium:
+        type: boolean
+      proposals_tier:
         type: string
       published_on:
         type: string
+      qualifications:
+        $ref: '#/definitions/server.JobQualifications'
+      recno:
+        type: integer
       renewed_on:
         type: string
       skills:
@@ -172,8 +253,14 @@ definitions:
         type: string
       url:
         type: string
+      was_renewed:
+        type: boolean
       weekly_budget:
         $ref: '#/definitions/server.BudgetInfo'
+      weekly_retainer_budget:
+        $ref: '#/definitions/server.BudgetInfo'
+      workload:
+        type: string
     type: object
   server.JobsResponse:
     properties:
@@ -196,6 +283,105 @@ info:
   title: Upwork Job API
   version: "1.0"
 paths:
+  /api-keys/{key}/cache:
+    delete:
+      description: Removes a specific API key from the cache
+      parameters:
+      - description: API key to clear from cache
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Clear API key cache
+      tags:
+      - api-keys
+  /api-keys/refresh-cache:
+    post:
+      description: Forces a refresh of the API keys cache from Firestore
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Refresh API keys cache
+      tags:
+      - api-keys
+  /cache/clear:
+    delete:
+      description: Removes all cached responses (does not affect API key cache)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Clear all response caches
+      tags:
+      - cache
+  /cache/stats:
+    get:
+      description: Returns cache hit/miss ratio and performance metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/server.JobsResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get cache statistics
+      tags:
+      - cache
   /health:
     get:
       description: Returns a 200 response when the API is up.
@@ -319,7 +505,8 @@ paths:
         in: query
         name: job_type
         type: string
-      - description: Filter by contractor tier (entry|intermediate|expert or numeric code)
+      - description: Filter by contractor tier (entry|intermediate|expert or numeric
+          code)
         in: query
         name: contractor_tier
         type: string
