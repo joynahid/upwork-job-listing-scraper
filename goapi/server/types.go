@@ -1,6 +1,7 @@
 package server
 
 import (
+	"strconv"
 	"strings"
 	"time"
 )
@@ -143,6 +144,7 @@ type JobDTO struct {
 	PostedOn             string             `json:"posted_on,omitempty"`
 	CreatedOn            string             `json:"created_on,omitempty"`
 	PublishTime          string             `json:"publish_time,omitempty"`
+	PublishTimeRelative  string             `json:"publish_time_relative,omitempty"`
 	Category             *CategoryInfo      `json:"category,omitempty"`
 	Budget               *BudgetInfo        `json:"budget,omitempty"`
 	Buyer                *BuyerDTO          `json:"buyer,omitempty"`
@@ -187,6 +189,7 @@ type JobSummaryDTO struct {
 	Ciphertext           string             `json:"ciphertext,omitempty"`
 	URL                  string             `json:"url,omitempty"`
 	PublishedOn          string             `json:"published_on,omitempty"`
+	PublishTimeRelative  string             `json:"publish_time_relative,omitempty"`
 	RenewedOn            string             `json:"renewed_on,omitempty"`
 	LastVisitedAt        string             `json:"last_visited_at,omitempty"`
 	Workload             string             `json:"workload,omitempty"`
@@ -381,13 +384,62 @@ func (job JobRecord) ToDTO() JobDTO {
 		dto.CreatedOn = job.CreatedOn.UTC().Format(time.RFC3339)
 	}
 	if job.PublishTime != nil {
-		dto.PublishTime = job.PublishTime.UTC().Format(time.RFC3339)
+		publishTime := job.PublishTime.UTC()
+		dto.PublishTime = publishTime.Format(time.RFC3339)
+		dto.PublishTimeRelative = formatRelativeTime(publishTime)
 	}
 	if job.LastVisitedAt != nil {
 		dto.LastVisitedAt = job.LastVisitedAt.UTC().Format(time.RFC3339)
 	}
 
 	return dto
+}
+
+func formatRelativeTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+
+	now := time.Now().UTC()
+	if t.After(now) {
+		return "just now"
+	}
+
+	diff := now.Sub(t)
+	seconds := int(diff.Seconds())
+	minutes := int(diff.Minutes())
+	hours := int(diff.Hours())
+	days := int(diff.Hours() / 24)
+
+	switch {
+	case seconds < 60:
+		if seconds <= 1 {
+			return "just now"
+		}
+		return formatTimeUnit(seconds, "second")
+	case minutes < 60:
+		return formatTimeUnit(minutes, "minute")
+	case hours < 24:
+		return formatTimeUnit(hours, "hour")
+	case days < 7:
+		return formatTimeUnit(days, "day")
+	case days < 30:
+		weeks := days / 7
+		return formatTimeUnit(weeks, "week")
+	case days < 365:
+		months := days / 30
+		return formatTimeUnit(months, "month")
+	default:
+		years := days / 365
+		return formatTimeUnit(years, "year")
+	}
+}
+
+func formatTimeUnit(value int, unit string) string {
+	if value == 1 {
+		return "1 " + unit + " ago"
+	}
+	return strconv.Itoa(value) + " " + unit + "s ago"
 }
 
 func canonicalEnumKey(value string) string {
@@ -508,7 +560,9 @@ func (job JobSummaryRecord) ToDTO() JobSummaryDTO {
 	}
 
 	if job.PublishedOn != nil {
-		dto.PublishedOn = job.PublishedOn.UTC().Format(time.RFC3339)
+		publishedOn := job.PublishedOn.UTC()
+		dto.PublishedOn = publishedOn.Format(time.RFC3339)
+		dto.PublishTimeRelative = formatRelativeTime(publishedOn)
 	}
 	if job.RenewedOn != nil {
 		dto.RenewedOn = job.RenewedOn.UTC().Format(time.RFC3339)
