@@ -90,7 +90,6 @@
             "type": "string",
             "description": "Only include jobs posted after this date and time. Format: YYYY-MM-DDTHH:MM:SSZ (e.g., 2025-01-01T00:00:00Z). You can also use relative times like '24h' (last 24 hours), '7d' (last 7 days), '1w' (last week).",
             "editor": "textfield",
-            "format": "date-time",
             "example": "2025-01-01T00:00:00Z"
         },
         "postedBefore": {
@@ -98,7 +97,6 @@
             "type": "string",
             "description": "Only include jobs posted before this date and time. Format: YYYY-MM-DDTHH:MM:SSZ (e.g., 2025-12-31T23:59:59Z).",
             "editor": "textfield",
-            "format": "date-time",
             "example": "2025-12-31T23:59:59Z"
         },
         "lastVisitedAfter": {
@@ -106,7 +104,6 @@
             "type": "string",
             "description": "Return jobs where the buyer was last active after this date and time. Format: YYYY-MM-DDTHH:MM:SSZ (e.g., 2025-01-01T00:00:00Z).",
             "editor": "textfield",
-            "format": "date-time",
             "example": "2025-01-01T00:00:00Z"
         },
         "budgetMin": {
