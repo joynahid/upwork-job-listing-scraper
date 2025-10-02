@@ -31,7 +31,7 @@ class UpworkJobAPIWrapper:
 
         Args:
             max_jobs: Maximum number of jobs to fetch
-            filters: Optional filters to apply to the job search
+            filters: Optional filters to apply to the job search (already in Go API format)
 
         Returns:
             API response containing job data
@@ -43,56 +43,20 @@ class UpworkJobAPIWrapper:
         params = {"limit": max_jobs} if max_jobs else {}
         
         # Add filters to params if provided
+        # Filters are already in Go API format from the URL parser
         if filters:
-            # Map filter names to API parameter names
-            filter_mapping = {
-                "offset": "offset",
-                "paymentVerified": "payment_verified",
-                "categoryGroup": "category_group",
-                "jobType": "job_type",
-                "contractorTier": "contractor_tier",
-                "postedAfter": "posted_after",
-                "postedBefore": "posted_before",
-                "lastVisitedAfter": "last_visited_after",
-                "budgetMin": "budget_min",
-                "budgetMax": "budget_max",
-                "hourlyMin": "hourly_min",
-                "hourlyMax": "hourly_max",
-                "durationLabel": "duration_label",
-                "buyerTotalSpentMin": "buyer.total_spent_min",
-                "buyerTotalSpentMax": "buyer.total_spent_max",
-                "buyerTotalAssignmentsMin": "buyer.total_assignments_min",
-                "buyerTotalAssignmentsMax": "buyer.total_assignments_max",
-                "buyerTotalJobsWithHiresMin": "buyer.total_jobs_with_hires_min",
-                "buyerTotalJobsWithHiresMax": "buyer.total_jobs_with_hires_max",
-                "isContractToHire": "is_contract_to_hire",
-                "numberOfPositionsMin": "number_of_positions_min",
-                "numberOfPositionsMax": "number_of_positions_max",
-                "wasRenewed": "was_renewed",
-                "hideBudget": "hide_budget",
-                "proposalsTier": "proposals_tier",
-                "minJobSuccessScore": "min_job_success_score",
-                "minOdeskHours": "min_odesk_hours",
-                "prefEnglishSkill": "pref_english_skill",
-                "risingTalent": "rising_talent",
-                "shouldHavePortfolio": "should_have_portfolio",
-                "minHoursWeek": "min_hours_week",
-            }
-            
             for filter_key, filter_value in filters.items():
                 if filter_value is not None:
-                    api_param = filter_mapping.get(filter_key, filter_key)
-                    if filter_key in {"tags", "skills"} and isinstance(filter_value, list):
-                        params[api_param] = ",".join(filter_value)
-                    elif isinstance(filter_value, list):
-                        params[api_param] = ",".join(str(item) for item in filter_value)
+                    # Handle comma-separated values
+                    if isinstance(filter_value, list):
+                        params[filter_key] = ",".join(str(item) for item in filter_value)
                     else:
-                        params[api_param] = filter_value
+                        params[filter_key] = filter_value
 
         if self.debug_mode:
             Actor.log.info(f"🔍 Fetching jobs from: {jobs_url} (limit: {max_jobs})")
             if params:
-                Actor.log.info(f"🎯 Filters: {params}")
+                Actor.log.info(f"🎯 Parameters: {params}")
 
         try:
             response = await self.client.get(jobs_url, params=params)

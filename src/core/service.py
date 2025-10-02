@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import random
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
@@ -39,6 +40,7 @@ class UpworkJobService:
         self.proxy_url: str | None = None
         self.data_store = data_store
         self._initialized = False
+        self._driver_thread_lock = threading.RLock()
         browser_profile_env = os.getenv("BROWSER_PROFILE_PATH")
         default_profile = Path("browser_data") / "upwork_scraper_profile"
         self.browser_profile_path = (
@@ -176,7 +178,7 @@ class UpworkJobService:
             await self._apply_random_delay()
 
         logger.info(
-            "🏁 Real-time job scraping session finished with %s jobs saved individually",
+            "🏁 Scraping session complete! Total: %s jobs saved to Firestore",
             self.total_jobs_processed,
         )
 
@@ -248,80 +250,161 @@ class UpworkJobService:
         await self._apply_random_delay()
 
     async def _process_job_urls_individually(self, job_list: list[dict]) -> None:
-        """Process job URLs one by one in real-time to save jobs immediately."""
+        """Process job URLs concurrently by opening all tabs simultaneously."""
         total_jobs = len(job_list)
 
         if total_jobs == 0:
             logger.info("No jobs to process individually in real-time")
             return
 
-        logger.info(f"Processing {total_jobs} job URLs individually in real-time")
+        logger.info(f"Processing {total_jobs} job URLs concurrently with no limits")
 
-        for i, job in enumerate(job_list, 1):
-            # Check for cancellation before processing each job
-            current_task = asyncio.current_task()
-            if current_task and current_task.cancelled():
-                logger.info("Task cancelled during individual job processing")
-                raise asyncio.CancelledError()
+        # Temporary fix for the bug in Botasaurus Driver - dynamically add is_closed property
+        if not hasattr(self.driver._tab.__class__, "is_closed"):
+            self.driver._tab.__class__.is_closed = property(
+                fget=lambda self: self.closed,
+                fset=lambda self, value: setattr(self, "_is_closed_override", value),
+            )
 
-            logger.info(f"Processing job {i}/{total_jobs}: {job['uid']}")
+        # Step 1: Open ALL tabs first (lightweight, no page loading yet)
+        logger.info(f"📂 Opening all {total_jobs} tabs (lightweight mode)...")
+        open_tasks = [
+            asyncio.create_task(self._open_tab_for_job(job, index, total_jobs))
+            for index, job in enumerate(job_list, 1)
+        ]
 
+        try:
+            # Wait for ALL tabs to finish opening before proceeding
+            results = await asyncio.gather(*open_tasks, return_exceptions=True)
+            
+            # Filter out None results and exceptions
+            tabs: list[tuple[Tab, dict]] = []
+            for result in results:
+                if isinstance(result, Exception):
+                    logger.error(f"Tab opening failed: {result}")
+                elif result is not None:
+                    tabs.append(result)
+            
+            logger.info(f"✅ All {len(tabs)} tabs opened successfully!")
+            
+        except asyncio.CancelledError:
+            logger.info("Task cancelled during tab opening; cleaning up")
+            for task in open_tasks:
+                task.cancel()
+            raise
+
+        # Step 2: Now visit and process each opened tab (heavy operations happen here)
+        logger.info(f"🔄 Now loading and processing {len(tabs)} tabs one by one...")
+        jobs_before = self._total_jobs_processed
+        
+        for index, (tab, job) in enumerate(tabs, 1):
+            job_title = job.get("title", "Unknown")
+            logger.info(f"Processing tab {index}/{len(tabs)}: {job_title}")
+            
             try:
-                await self._process_single_job_url(job)
+                await self._extract_and_push_comprehensive_job_from_tab(tab, job)
             except asyncio.CancelledError:
-                logger.info("Individual job processing cancelled")
+                logger.info("Processing cancelled")
                 raise
             except Exception as exc:
                 logger.error(
-                    "Failed to process individual job %s: %s",
-                    job["uid"],
+                    "Failed to process job %s: %s",
+                    job_title,
                     exc,
                     exc_info=True,
                 )
+            finally:
+                await self._close_tab(tab)
+        
+        # Summary
+        jobs_saved = self._total_jobs_processed - jobs_before
+        logger.info(f"✅ Batch complete: {jobs_saved}/{len(tabs)} jobs saved to Firestore")
 
-    async def _process_single_job_url(self, job: dict) -> None:
-        """Process a single job URL and save it immediately."""
+    async def _open_tab_for_job(
+        self, job: dict, index: int, total_jobs: int
+    ) -> tuple[Tab, dict] | None:
+        """Open a job detail tab immediately and return the tab with job data."""
         if not self.driver:
             raise RuntimeError("Driver not initialized")
 
-        tab: Tab = self.driver._tab
+        current_task = asyncio.current_task()
+        if current_task and current_task.cancelled():
+            raise asyncio.CancelledError()
 
-        # Temporary fix for the bug in Botasaurus Driver - dynamically add is_closed property
-        if not hasattr(self.driver._tab.__class__, 'is_closed'):
-            self.driver._tab.__class__.is_closed = property(
-                fget=lambda self: self.closed,
-                fset=lambda self, value: setattr(self, '_is_closed_override', value)
-            )
+        job_uid = job.get("uid", "unknown")
+        logger.info(
+            "Opening tab %s/%s for job %s",
+            index,
+            total_jobs,
+            job_uid,
+        )
 
         try:
-            logger.debug(f"Opening job URL: {job['uid']}")
-
-            # Open the job URL in a new tab
-            tab: Tab = self.driver.open_link_in_new_tab(
-                self.gen_job_url(job), bypass_cloudflare=True, wait=3, timeout=120
+            tab = await asyncio.to_thread(
+                self._open_tab_blocking,
+                job,
             )
-            logger.debug(f"Opened new tab for job: {job['uid']}")
+            return tab, job
+        except asyncio.CancelledError:
+            logger.info("Tab opening cancelled for job %s", job_uid)
+            raise
+        except Exception as exc:
+            logger.error(
+                "Failed to open tab for job %s: %s",
+                job_uid,
+                exc,
+                exc_info=True,
+            )
+            return None
 
-            # Process the job and save immediately
-            await self._extract_and_push_comprehensive_job_from_tab(tab, job)
-        finally:
-            # Ensure tab is always closed, even if processing failed
-            tab.close()
-
-    async def _extract_and_push_comprehensive_job_from_tab(
-        self, tab: Tab, job: dict
-    ) -> None:
-        """Extract comprehensive job information from a pre-opened tab and save immediately."""
+    def _open_tab_blocking(self, job: dict) -> Tab:
+        """Blocking helper that opens a tab with thread-safe driver access."""
         if not self.driver:
-            logger.error("Driver not available for job extraction")
+            raise RuntimeError("Driver not initialized")
+
+        url = self.gen_job_url(job)
+        with self._driver_thread_lock:
+            # Open tab without waiting - let it load in background
+            tab = self.driver.open_link_in_new_tab(
+                url,
+                bypass_cloudflare=False,  # Don't bypass yet, do it during processing
+                wait=0,  # Don't wait for load, just open the tab
+                timeout=120,
+            )
+            # Small delay to prevent browser overload
+            time.sleep(0.3)
+            return tab
+
+    async def _close_tab(self, tab: Tab) -> None:
+        """Close a tab safely, ignoring errors and avoiding double closes."""
+        if getattr(tab, "is_closed", False):
             return
 
-        job_title = job.get("title", "Unknown Job")
-        job_uid = job.get("uid", "unknown")
+        if not self.driver:
+            return
+
+        close_fn = getattr(self.driver, "close_tab", None)
 
         try:
+            await asyncio.to_thread(self._close_tab_blocking, tab, close_fn)
+        except Exception as exc:
+            logger.debug("Failed to close tab cleanly: %s", exc)
+
+    def _close_tab_blocking(self, tab: Tab, close_fn) -> None:
+        """Blocking helper to close tabs under driver lock."""
+        with self._driver_thread_lock:
+            if close_fn:
+                close_fn(tab)
+            else:
+                tab.close()
+
+    def _extract_job_data_blocking(self, tab: Tab, job_title: str) -> tuple[dict | None, str | None]:
+        """Blocking helper to extract job data with thread-safe driver access."""
+        if not self.driver:
+            return None, None
+
+        with self._driver_thread_lock:
             # Switch to the specific tab
-            logger.info(f"🔄 Processing job in real-time: {job_title}")
             self.driver.switch_to_tab(tab)
 
             try:
@@ -337,6 +420,30 @@ class UpworkJobService:
             # Extract comprehensive job details
             logger.debug(f"🔍 Extracting job details from: {job_title}")
             detailed_job = self.extract_nuxt_with_js_engine(self.driver.page_html)
+            current_url = self.driver.current_url
+
+            return detailed_job, current_url
+
+    async def _extract_and_push_comprehensive_job_from_tab(
+        self, tab: Tab, job: dict
+    ) -> None:
+        """Extract comprehensive job information from a pre-opened tab and save immediately."""
+        if not self.driver:
+            logger.error("Driver not available for job extraction")
+            return
+
+        job_title = job.get("title", "Unknown Job")
+        job_uid = job.get("uid", "unknown")
+
+        detailed_job: dict | None = None
+        current_url: str | None = None
+
+        try:
+            # Extract data from tab with thread-safe driver access
+            logger.info(f"🔄 Processing job in real-time: {job_title}")
+            detailed_job, current_url = await asyncio.to_thread(
+                self._extract_job_data_blocking, tab, job_title
+            )
 
             if detailed_job is None:
                 logger.error("💥 Failed to extract job details from: %s", job_title)
@@ -351,27 +458,32 @@ class UpworkJobService:
                 return
 
             detailed_job["uid"] = final_job_uid
-            detailed_job["url"] = self.driver.current_url
-            detailed_job["scrape_metadata"] = {
-                "last_visited_at": datetime.now(timezone.utc).isoformat(),
-                "last_visited_by": "upwork_scraper",
-            }
 
-            # Flatten key fields to root level for Firestore ordering
-            self._flatten_sortable_fields(detailed_job)
-
-            # Save job details
-            await self.save_individual_job_details(detailed_job)
-            logger.debug(f"✅ Successfully saved job details for: {job_title}")
-
-            # Track processed job
-            self._total_jobs_processed += 1
-            logger.debug(f"📊 Total jobs processed: {self._total_jobs_processed}")
-
+        except asyncio.CancelledError:
+            logger.info("Job detail processing cancelled for %s", job_uid)
+            raise
         except Exception as exc:
             logger.error(
                 "💥 Failed to extract job for %s: %s", job_title, exc, exc_info=True
             )
+            return
+        else:
+            if detailed_job is None:
+                return
+
+            detailed_job["url"] = current_url or detailed_job.get("url")
+            detailed_job["scrape_metadata"] = {
+                "last_visited_at": datetime.now(timezone.utc).isoformat(),
+                "last_visited_by": "upwork_scraper",
+            }
+            self._flatten_sortable_fields(detailed_job)
+
+            # Save job details to Firestore
+            await self.save_individual_job_details(detailed_job)
+            
+            # Track processed job
+            self._total_jobs_processed += 1
+            logger.info(f"💾 Saved to Firestore: {job_title} (Job #{self._total_jobs_processed})")
 
     @staticmethod
     def _flatten_sortable_fields(job_data: dict) -> None:

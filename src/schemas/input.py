@@ -181,9 +181,14 @@ class ActorInput(BaseModel):
         description="Structured search parameters for building Upwork queries"
     )
 
+    upwork_urls: list[HttpUrl] | None = Field(
+        default_factory=list,
+        description="Upwork search URLs - filters will be automatically extracted from these URLs"
+    )
+
     custom_search_urls: list[HttpUrl] | None = Field(
         default_factory=list,
-        description="Custom Upwork search URLs to scrape (takes precedence over search_parameters)"
+        description="[DEPRECATED] Use upwork_urls instead. Custom Upwork search URLs to scrape"
     )
 
     # Processing options

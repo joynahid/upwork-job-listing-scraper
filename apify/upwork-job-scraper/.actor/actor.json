@@ -1,9 +1,9 @@
 {
 	"actorSpecification": 1,
 	"name": "live-upwork-job-scraper",
-	"title": "Live Upwork Job Scraper",
-	"description": "Real-time Upwork job listings scraper with advanced bot detection evasion, Cloudflare bypass, and comprehensive data extraction. Get fresh job postings with client details, budgets, skills, and competition analysis. Perfect for freelancers, agencies, and job market research.",
-	"version": "0.1",
+	"title": "Live Upwork Job Scraper - URL Parser",
+	"description": "Simply paste your Upwork search URL and get instant results! Real-time job listings with complete client data, budgets, skills, and competition analysis. Just search on Upwork, copy the URL, and let the scraper do the rest. Perfect for freelancers, agencies, and job market research. Supports all Upwork filters automatically.",
+	"version": "0.2",
 	"buildTag": "latest",
 	"meta": {
 		"templateId": "python-beautifulsoup",
@@ -14,13 +14,15 @@
 			"freelance jobs",
 			"job listings",
 			"real-time data",
-			"bot detection evasion",
-			"cloudflare bypass",
+			"url parser",
+			"job automation",
 			"job market research",
 			"freelancer tools",
 			"upwork automation",
 			"job monitoring",
-			"competitive intelligence"
+			"competitive intelligence",
+			"easy setup",
+			"copy paste"
 		]
 	},
 	"input": "./input_schema.json",

@@ -1,6 +1,3 @@
 {
-  "maxJobs": 20,
-  "jobType": "fixed-price",
-  "budgetMin": 500,
-  "budgetMax": 5000
+    "maxJobs": 20
 }

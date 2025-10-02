@@ -1,9 +1,14 @@
 """Configuration management for the Upwork Job Scraper Actor."""
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from apify import Actor
+
+try:
+    from .url_parser import UpworkURLParser
+except ImportError:
+    from url_parser import UpworkURLParser
 
 
 class ActorConfig:
@@ -19,95 +24,50 @@ class ActorConfig:
         self.debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
         
         # Actor input parameters
+        self.upwork_url = self.actor_input.get("upworkUrl", "")
         self.max_jobs = self.actor_input.get("maxJobs", 20)
         
-        # Build filters from actor input
-        self.filters = self._build_filters()
+        # Parse Upwork URL to extract filters
+        self.filters = self._parse_upwork_url()
     
-    def _build_filters(self) -> Dict[str, Any]:
-        """Build filters object from actor input fields."""
-        filters = {}
-        filter_fields = [
-            "offset",
-            "paymentVerified",
-            "category",
-            "categoryGroup",
-            "status",
-            "jobType",
-            "contractorTier",
-            "country",
-            "tags",
-            "skills",
-            "postedAfter",
-            "postedBefore",
-            "lastVisitedAfter",
-            "budgetMin",
-            "budgetMax",
-            "hourlyMin",
-            "hourlyMax",
-            "durationLabel",
-            "engagement",
-            "buyerTotalSpentMin",
-            "buyerTotalSpentMax",
-            "buyerTotalAssignmentsMin",
-            "buyerTotalAssignmentsMax",
-            "buyerTotalJobsWithHiresMin",
-            "buyerTotalJobsWithHiresMax",
-            "workload",
-            "isContractToHire",
-            "numberOfPositionsMin",
-            "numberOfPositionsMax",
-            "wasRenewed",
-            "premium",
-            "hideBudget",
-            "proposalsTier",
-            "minJobSuccessScore",
-            "minOdeskHours",
-            "prefEnglishSkill",
-            "risingTalent",
-            "shouldHavePortfolio",
-            "minHoursWeek",
-            "sort",
-        ]
+    def _parse_upwork_url(self) -> Dict[str, Any]:
+        """
+        Parse Upwork URL and extract filters in Go API format.
         
-        for field in filter_fields:
-            value = self.actor_input.get(field)
-            if value is None:
-                continue
-
-            if isinstance(value, str) and value.strip() == "":
-                continue
-
-            if field == "offset" and isinstance(value, int) and value <= 0:
-                continue
-
-            if field in {"tags", "skills"}:
-                tokens: List[str] = []
-                if isinstance(value, str):
-                    tokens = [token.strip() for token in value.split(",") if token.strip()]
-                elif isinstance(value, list):
-                    tokens = [str(token).strip() for token in value if str(token).strip()]
-                if tokens:
-                    filters[field] = tokens
-                continue
-
-            if field == "country" and isinstance(value, str):
-                filters[field] = value.upper()
-                continue
-
-            filters[field] = value
+        Returns:
+            Dictionary of filters formatted for Go API
+        """
+        if not self.upwork_url:
+            if self.debug_mode:
+                Actor.log.warning("⚠️ No Upwork URL provided, using default filters")
+            return {}
         
-        return filters
+        try:
+            filters = UpworkURLParser.parse_url(self.upwork_url)
+            if self.debug_mode:
+                Actor.log.info(f"✅ Parsed {len(filters)} filters from URL")
+            return filters
+        except Exception as e:
+            Actor.log.error(f"❌ Failed to parse Upwork URL: {e}")
+            return {}
     
     def validate(self) -> bool:
         """Validate required configuration."""
-        return bool(self.api_key)
+        if not self.api_key:
+            Actor.log.error("❌ API key is required")
+            return False
+        
+        if not self.upwork_url:
+            Actor.log.warning("⚠️ No Upwork URL provided - will fetch jobs without filters")
+        
+        return True
     
     def log_config(self) -> None:
         """Log configuration details."""
+        Actor.log.info("📊 Configuration:")
+        Actor.log.info(f"   Upwork URL: {self.upwork_url}")
+        Actor.log.info(f"   Max Jobs: {self.max_jobs}")
+        Actor.log.info(f"   Debug Mode: {self.debug_mode}")
+        
         if self.debug_mode:
-            Actor.log.info("📊 Configuration:")
-            Actor.log.info(f"   Max Jobs: {self.max_jobs}")
-            Actor.log.info(f"   Debug Mode: {self.debug_mode}")
-            Actor.log.info(f"   Raw Actor Input: {self.actor_input}")
-            Actor.log.info(f"   Filters: {self.filters}")
+            Actor.log.info(f"   Parsed Filters: {self.filters}")
