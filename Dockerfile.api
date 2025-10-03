@@ -12,7 +12,7 @@ RUN go mod download
 COPY goapi/. ./
 
 # Build the binary
-RUN go build -o /app/api main.go
+RUN go build -o /app/api -v ./main.go
 
 WORKDIR /app
 

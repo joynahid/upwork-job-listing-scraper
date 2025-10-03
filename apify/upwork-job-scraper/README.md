@@ -1,54 +1,54 @@
-# Live Upwork Job Scraper - Get Fresh Job Listings Instantly
+# 🚀 Live Upwork Job Scraper - Get Fresh Job Listings Instantly
 
 **The Ultimate Upwork Job Discovery Tool**
 
 Stop manually browsing Upwork for hours! Get real-time job listings with complete client data, budgets, competition analysis, and market intelligence - all delivered instantly to your dashboard.
 
 **Perfect for:**
-- **Freelancers** seeking high-paying projects
-- **Agencies** managing multiple clients
-- **Market Researchers** analyzing freelance trends
-- **Business Owners** finding talent opportunities
-- **Job Seekers** discovering new opportunities
+- 💼 **Freelancers** seeking high-paying projects
+- 🏢 **Agencies** managing multiple clients
+- 📊 **Market Researchers** analyzing freelance trends
+- 👔 **Business Owners** finding talent opportunities
+- 🔍 **Job Seekers** discovering new opportunities
 
-## What Makes This Different?
+## ✨ What Makes This Different?
 
-### **Complete Job Intelligence**
+### 🎯 Complete Job Intelligence
 - **Budget & Rate Analysis**: Exact budgets, hourly rates, and client spending history
 - **Client Profiles**: Payment verification, location, total assignments, and hiring patterns
 - **Competition Insights**: Applicant counts, interview invitations, and market demand
 - **Real-Time Updates**: Fresh postings updated continuously
 - **Skills & Categories**: Detailed skill requirements and category information
 
-### **Instant Results**
+### ⚡ Instant Results
 - **No Manual Browsing**: Skip hours of searching through Upwork pages
 - **Bulk Data Export**: Get hundreds of jobs in seconds, not hours
 - **Smart Filtering**: Focus on jobs that match your exact criteria
 - **Rich Data Format**: CSV, JSON - use anywhere you need
 
-### **URL-Based Search**
+### 🔗 URL-Based Search
 - **Copy & Paste**: Just copy your Upwork search URL
 - **All Filters Supported**: Any filter combination you use on Upwork
 - **No Manual Configuration**: Filters are automatically extracted from the URL
 - **Easy Updates**: Change your search criteria by updating the URL
 
-## Incredibly Affordable Pricing
+## 💰 Incredibly Affordable Pricing
 
-### **Pay Only for Results**
+### 💸 Pay Only for Results
 - **Ultra-Low Cost**: Just **$0.015 per job** (incredibly affordable!)
 - **Example**: 100 jobs = **$1.50**
 - **Bulk Value**: 1000 jobs = **$15.00**
 - **No Hidden Fees**: Pay only for successfully retrieved jobs
 
-### **Smart Billing**
-- **Only Successful Jobs Count** - Failed requests are FREE
-- **No Minimum Charges** - Start with just 1 job
-- **Transparent Costs** - See exactly what you're paying for
-- **Volume Discounts** - More jobs = better value
+### 🧾 Smart Billing
+- ✅ **Only Successful Jobs Count** - Failed requests are FREE
+- 🎯 **No Minimum Charges** - Start with just 1 job
+- 📈 **Transparent Costs** - See exactly what you're paying for
+- 🎁 **Volume Discounts** - More jobs = better value
 
-## What You Get
+## 📦 What You Get
 
-### **Complete Job Data**
+### 📋 Complete Job Data
 Every job includes:
 - **Job Details**: Title, description, budget, hourly rates
 - **Client Intelligence**: Payment status, spending history, location, hiring patterns
@@ -56,72 +56,72 @@ Every job includes:
 - **Timing Data**: Posted dates, last activity, relative timestamps
 - **Requirements**: Skills, experience level, project duration
 
-## Simple Setup
+## 🎬 Simple Setup
 
 Just 3 easy steps:
 
-1. **Search on Upwork**: Go to [Upwork Jobs](https://www.upwork.com/nx/search/jobs/) and set your filters
-2. **Copy the URL**: Copy the full URL from your browser (includes all your filters)
-3. **Paste & Run**: Paste the URL into the actor input and click Start!
+1. 🔍 **Search on Upwork**: Go to [Upwork Jobs](https://www.upwork.com/nx/search/jobs/) and set your filters
+2. 📋 **Copy the URL**: Copy the full URL from your browser (includes all your filters)
+3. ▶️ **Paste & Run**: Paste the URL into the actor input and click Start!
 
-### Example URLs
+### 📝 Example URLs
 
-**Python Developer Jobs (Hourly, $50+/hr, Payment Verified)**
+**🐍 Python Developer Jobs (Hourly, $50+/hr, Payment Verified)**
 ```
 https://www.upwork.com/nx/search/jobs/?q=python%20developer&job_type=hourly&hourly_rate=50-&payment_verified=1
 ```
 
-**Expert Web Developers (Fixed Price, $1000+ Budget)**
+**🌐 Expert Web Developers (Fixed Price, $1000+ Budget)**
 ```
 https://www.upwork.com/nx/search/jobs/?q=web%20development&contractor_tier=3&amount=1000-
 ```
 
-**US Clients Only (Any Job Type)**
+**🇺🇸 US Clients Only (Any Job Type)**
 ```
 https://www.upwork.com/nx/search/jobs/?client_country=US&payment_verified=1
 ```
 
-**Recent React Jobs (Last 24 hours)**
+**⚛️ Recent React Jobs (Last 24 hours)**
 ```
 https://www.upwork.com/nx/search/jobs/?q=react&sort=recency
 ```
 
-## Supported URL Parameters
+## 🔧 Supported URL Parameters
 
 The actor automatically extracts and converts these Upwork URL parameters:
 
-### **Search & Filters**
+### 🔎 Search & Filters
 - `q` - Search keywords (e.g., "python developer")
 - `payment_verified` - Client payment verification (1 = verified)
 - `job_type` or `t` - Job type (0 = hourly, 1 = fixed-price)
 - `contractor_tier` - Experience level (1 = entry, 2 = intermediate, 3 = expert)
 - `job_status` - Job status (open, closed)
 
-### **Location**
+### 🌍 Location
 - `client_country` or `location` - Client country code (e.g., US, GB, CA)
 
-### **Budget & Rates**
+### 💵 Budget & Rates
 - `amount` - Fixed budget range (e.g., "1000-5000" or "500-")
 - `hourly_rate` - Hourly rate range (e.g., "25-100" or "50-")
 
-### **Client Filters**
+### 👤 Client Filters
 - `client_hires` - Client hiring history range (e.g., "1-9", "10-")
 - `client_total_spent` - Client total spend range
 - `client_total_feedback` - Client feedback score
 
-### **Skills & Tags**
+### 🏷️ Skills & Tags
 - `skills` - Required skills (comma-separated)
 - `tags` - Job tags
 
-### **Job Details**
+### 📅 Job Details
 - `duration_v3` - Project duration (week, month, semester, ongoing)
 - `workload` - Workload requirements
 - `contract_to_hire` - Contract-to-hire opportunities (1 = yes)
 
-### **Sorting**
+### 🔄 Sorting
 - `sort` - Sort order (recency, relevance, client_rating, duration)
 
-## Sample Output
+## 📄 Sample Output
 
 Here's what you get for each job:
 
@@ -185,23 +185,23 @@ Here's what you get for each job:
 ```
 
 
-## Why Choose This Actor?
+## 🏆 Why Choose This Actor?
 
-### **🚀 Lightning Fast**
+### 🚀 Lightning Fast
 - **Get results in seconds** - no more waiting around
 - **High-performance system** for maximum speed
 - **Real-time data** - always up-to-date information
 
-### **💎 Premium Data Quality**
+### 💎 Premium Data Quality
 - **Complete job intelligence** - budgets, client history, competition metrics
 - **Structured format** - clean, consistent data you can rely on
 - **Always fresh** - continuously updated job listings
 
-### **⚡ Easy to Use**
+### ⚡ Easy to Use
 - **Simple URL input** - just copy and paste from Upwork
 - **All filters supported** - any combination you can use on Upwork
 - **Ready-to-export** - perfect for spreadsheets and analysis
 
 ---
 
-**Ready to get started?** Simply copy your Upwork search URL, paste it into the actor, and get fresh, structured job data in seconds!
+**Ready to get started?** 🎉 Simply copy your Upwork search URL, paste it into the actor, and get fresh, structured job data in seconds!

@@ -5,11 +5,6 @@ from typing import Any, Dict, Optional
 
 from apify import Actor
 
-try:
-    from .url_parser import UpworkURLParser
-except ImportError:
-    from url_parser import UpworkURLParser
-
 
 class ActorConfig:
     """Configuration management for the Upwork Job Scraper Actor."""
@@ -35,16 +30,6 @@ class ActorConfig:
         """Build the request payload expected by the Go API."""
         if not self.upwork_url:
             return {}
-
-        if self.debug_mode:
-            try:
-                parsed_filters = UpworkURLParser.parse_url(self.upwork_url)
-                Actor.log.info(
-                    f"✅ Parsed Upwork URL into {len(parsed_filters)} derived filters"
-                )
-                Actor.log.debug(f"   Derived filters: {parsed_filters}")
-            except Exception as exc:  # pragma: no cover - best effort logging
-                Actor.log.warning(f"⚠️ Unable to parse Upwork URL for diagnostics: {exc}")
 
         return {"upwork_url": self.upwork_url}
     
