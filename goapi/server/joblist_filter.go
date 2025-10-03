@@ -174,3 +174,22 @@ func formatJobListFilterOptions(opts JobListFilterOptions) string {
 
 	return strings.Join(parts, ", ")
 }
+
+func parseEnumFilterValue(raw string, paramName string, resolver func(string) (int, bool), accepted []string) (*int, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, nil
+	}
+
+	if numeric, err := strconv.Atoi(trimmed); err == nil {
+		value := numeric
+		return &value, nil
+	}
+
+	if code, ok := resolver(trimmed); ok {
+		value := code
+		return &value, nil
+	}
+
+	return nil, fmt.Errorf("invalid %s parameter (expected one of %s or an integer code)", paramName, strings.Join(accepted, ", "))
+}

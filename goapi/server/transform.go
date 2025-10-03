@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode"
 
 	"cloud.google.com/go/firestore"
 )
@@ -884,274 +885,370 @@ func applyFilters(job *JobRecord, opts FilterOptions) bool {
 		}
 	}
 
-	if opts.CategorySlug != "" {
-		if job.Category == nil || !strings.EqualFold(job.Category.Slug, opts.CategorySlug) {
+	if len(opts.ContractorTierCodes) > 0 {
+		if job.ContractorTier == nil || !intInSlice(*job.ContractorTier, opts.ContractorTierCodes) {
 			return false
 		}
 	}
 
-	if opts.CategoryGroupSlug != "" {
-		if job.Category == nil || !strings.EqualFold(job.Category.GroupSlug, opts.CategoryGroupSlug) {
+	if len(opts.JobTypeCodes) > 0 {
+		if job.JobType == nil || !intInSlice(*job.JobType, opts.JobTypeCodes) {
 			return false
 		}
 	}
 
-	if opts.Status != nil {
-		if job.Status == nil || *job.Status != *opts.Status {
+	if len(opts.DurationLabels) > 0 {
+		if strings.TrimSpace(job.DurationLabel) == "" || !stringInSliceFold(job.DurationLabel, opts.DurationLabels) {
 			return false
 		}
 	}
 
-	if opts.JobType != nil {
-		if job.JobType == nil || *job.JobType != *opts.JobType {
+	if len(opts.WorkloadValues) > 0 {
+		if !matchesWorkload(job.Workload, opts.WorkloadValues) {
 			return false
 		}
 	}
 
-	if opts.ContractorTier != nil {
-		if job.ContractorTier == nil || *job.ContractorTier != *opts.ContractorTier {
+	if opts.ContractToHire != nil {
+		if job.IsContractToHire == nil || *job.IsContractToHire != *opts.ContractToHire {
 			return false
 		}
 	}
 
-	if opts.Country != "" {
-		if job.Buyer == nil || !strings.EqualFold(job.Buyer.Country, opts.Country) {
+	if len(opts.BudgetRanges) > 0 {
+		if !matchesBudgetRanges(job, opts.BudgetRanges) {
 			return false
 		}
 	}
 
-	if opts.DurationLabel != "" {
-		if strings.TrimSpace(job.DurationLabel) == "" || !strings.EqualFold(job.DurationLabel, opts.DurationLabel) {
+	if len(opts.HourlyRanges) > 0 {
+		if !matchesHourlyRanges(job, opts.HourlyRanges) {
 			return false
 		}
 	}
 
-	if opts.Engagement != "" {
-		if strings.TrimSpace(job.Engagement) == "" || !strings.EqualFold(job.Engagement, opts.Engagement) {
+	if len(opts.ClientHiresRanges) > 0 {
+		if job.Buyer == nil || job.Buyer.TotalJobsWithHires == nil || !intRangeContains(*job.Buyer.TotalJobsWithHires, opts.ClientHiresRanges) {
 			return false
 		}
 	}
 
-	if opts.BudgetMin != nil {
-		// Only filter if job has a fixed budget that's below the minimum
-		if job.Budget != nil && job.Budget.FixedAmount != nil && *job.Budget.FixedAmount < *opts.BudgetMin {
+	if len(opts.CategoryGroupIDs) > 0 {
+		if job.Category == nil || !stringInSliceFold(job.Category.GroupSlug, opts.CategoryGroupIDs) {
 			return false
 		}
 	}
 
-	if opts.BudgetMax != nil {
-		// Only filter if job has a fixed budget that's above the maximum
-		if job.Budget != nil && job.Budget.FixedAmount != nil && *job.Budget.FixedAmount > *opts.BudgetMax {
+	if len(opts.Proposals) > 0 {
+		if job.ProposalsTier == "" || !stringInSliceFold(job.ProposalsTier, opts.Proposals) {
 			return false
 		}
 	}
 
-	if opts.HourlyMin != nil {
-		if job.HourlyInfo == nil {
-			return false
-		}
-		candidate := job.HourlyInfo.Min
-		if candidate == nil {
-			candidate = job.HourlyInfo.Max
-		}
-		if candidate == nil || *candidate < *opts.HourlyMin {
+	if len(opts.LocationRegions) > 0 {
+		if !matchesLocationFilters(job, opts.LocationRegions) {
 			return false
 		}
 	}
 
-	if opts.HourlyMax != nil {
-		if job.HourlyInfo == nil {
-			return false
-		}
-		candidate := job.HourlyInfo.Max
-		if candidate == nil {
-			candidate = job.HourlyInfo.Min
-		}
-		if candidate == nil || *candidate > *opts.HourlyMax {
+	if len(opts.Timezones) > 0 {
+		if !matchesTimezoneFilters(job, opts.Timezones) {
 			return false
 		}
 	}
 
-	if opts.PostedAfter != nil {
-		if job.PostedOn == nil || job.PostedOn.Before(*opts.PostedAfter) {
-			return false
-		}
-	}
-
-	if opts.PostedBefore != nil {
-		if job.PostedOn == nil || job.PostedOn.After(*opts.PostedBefore) {
-			return false
-		}
-	}
-
-	if opts.LastVisitedAfter != nil {
-		if job.LastVisitedAt == nil || job.LastVisitedAt.Before(*opts.LastVisitedAfter) {
-			return false
-		}
-	}
-
-	if len(opts.Tags) > 0 {
-		if len(job.Tags) == 0 && len(job.Skills) == 0 {
-			return false
-		}
-		keywordSet := make(map[string]struct{}, len(job.Tags)+len(job.Skills))
-		for _, tag := range job.Tags {
-			keywordSet[strings.ToLower(tag)] = struct{}{}
-		}
-		for _, skill := range job.Skills {
-			keywordSet[strings.ToLower(skill)] = struct{}{}
-		}
-		matched := false
-		for _, desired := range opts.Tags {
-			if _, ok := keywordSet[strings.ToLower(desired)]; ok {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			return false
-		}
-	}
-
-	if opts.BuyerTotalSpentMin != nil {
-		// Only filter if buyer data exists and is below minimum
-		if job.Buyer != nil && job.Buyer.TotalSpent != nil && *job.Buyer.TotalSpent < *opts.BuyerTotalSpentMin {
-			return false
-		}
-	}
-
-	if opts.BuyerTotalSpentMax != nil {
-		// Only filter if buyer data exists and is above maximum
-		if job.Buyer != nil && job.Buyer.TotalSpent != nil && *job.Buyer.TotalSpent > *opts.BuyerTotalSpentMax {
-			return false
-		}
-	}
-
-	if opts.BuyerTotalAssignmentsMin != nil {
-		// Only filter if buyer data exists and is below minimum
-		if job.Buyer != nil && job.Buyer.TotalAssignments != nil && *job.Buyer.TotalAssignments < *opts.BuyerTotalAssignmentsMin {
-			return false
-		}
-	}
-
-	if opts.BuyerTotalAssignmentsMax != nil {
-		// Only filter if buyer data exists and is above maximum
-		if job.Buyer != nil && job.Buyer.TotalAssignments != nil && *job.Buyer.TotalAssignments > *opts.BuyerTotalAssignmentsMax {
-			return false
-		}
-	}
-
-	if opts.BuyerTotalJobsWithHiresMin != nil {
-		// Only filter if buyer data exists and is below minimum
-		if job.Buyer != nil && job.Buyer.TotalJobsWithHires != nil && *job.Buyer.TotalJobsWithHires < *opts.BuyerTotalJobsWithHiresMin {
-			return false
-		}
-	}
-
-	if opts.BuyerTotalJobsWithHiresMax != nil {
-		// Only filter if buyer data exists and is above maximum
-		if job.Buyer != nil && job.Buyer.TotalJobsWithHires != nil && *job.Buyer.TotalJobsWithHires > *opts.BuyerTotalJobsWithHiresMax {
-			return false
-		}
-	}
-
-	// New filters
-	if opts.Workload != "" {
-		if job.Workload == "" || !strings.EqualFold(job.Workload, opts.Workload) {
-			return false
-		}
-	}
-
-	if opts.IsContractToHire != nil {
-		if job.IsContractToHire == nil || *job.IsContractToHire != *opts.IsContractToHire {
-			return false
-		}
-	}
-
-	if opts.NumberOfPositionsMin != nil {
-		// Only filter if number of positions exists and is below minimum
-		if job.NumberOfPositions != nil && *job.NumberOfPositions < *opts.NumberOfPositionsMin {
-			return false
-		}
-	}
-
-	if opts.NumberOfPositionsMax != nil {
-		// Only filter if number of positions exists and is above maximum
-		if job.NumberOfPositions != nil && *job.NumberOfPositions > *opts.NumberOfPositionsMax {
-			return false
-		}
-	}
-
-	if opts.WasRenewed != nil {
-		if job.WasRenewed == nil || *job.WasRenewed != *opts.WasRenewed {
-			return false
-		}
-	}
-
-	if opts.Premium != nil {
-		if job.Premium == nil || *job.Premium != *opts.Premium {
-			return false
-		}
-	}
-
-	if opts.HideBudget != nil {
-		if job.HideBudget == nil || *job.HideBudget != *opts.HideBudget {
-			return false
-		}
-	}
-
-	if opts.ProposalsTier != "" {
-		if job.ProposalsTier == "" || !strings.EqualFold(job.ProposalsTier, opts.ProposalsTier) {
-			return false
-		}
-	}
-
-	// Qualification filters
-	if job.Qualifications != nil {
-		if opts.MinJobSuccessScore != nil {
-			if job.Qualifications.MinJobSuccessScore == nil || *job.Qualifications.MinJobSuccessScore > *opts.MinJobSuccessScore {
-				return false
-			}
-		}
-
-		if opts.MinOdeskHours != nil {
-			if job.Qualifications.MinOdeskHours == nil || *job.Qualifications.MinOdeskHours > *opts.MinOdeskHours {
-				return false
-			}
-		}
-
-		if opts.PrefEnglishSkill != nil {
-			if job.Qualifications.PrefEnglishSkill == nil || *job.Qualifications.PrefEnglishSkill > *opts.PrefEnglishSkill {
-				return false
-			}
-		}
-
-		if opts.RisingTalent != nil {
-			if job.Qualifications.RisingTalent == nil || *job.Qualifications.RisingTalent != *opts.RisingTalent {
-				return false
-			}
-		}
-
-		if opts.ShouldHavePortfolio != nil {
-			if job.Qualifications.ShouldHavePortfolio == nil || *job.Qualifications.ShouldHavePortfolio != *opts.ShouldHavePortfolio {
-				return false
-			}
-		}
-
-		if opts.MinHoursWeek != nil {
-			if job.Qualifications.MinHoursWeek == nil || *job.Qualifications.MinHoursWeek > *opts.MinHoursWeek {
-				return false
-			}
-		}
-	} else {
-		// If qualifications is nil but filter requires qualification checks, exclude the job
-		if opts.MinJobSuccessScore != nil || opts.MinOdeskHours != nil || opts.PrefEnglishSkill != nil ||
-			opts.RisingTalent != nil || opts.ShouldHavePortfolio != nil || opts.MinHoursWeek != nil {
-			return false
-		}
+	if opts.PreviousClients != "" && !matchesPreviousClients(job, opts.PreviousClients) {
+		return false
 	}
 
 	return true
+}
+
+func intInSlice(value int, list []int) bool {
+	for _, item := range list {
+		if item == value {
+			return true
+		}
+	}
+	return false
+}
+
+func stringInSliceFold(value string, list []string) bool {
+	for _, item := range list {
+		if strings.EqualFold(item, value) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesWorkload(workload string, filters []string) bool {
+	if len(filters) == 0 {
+		return true
+	}
+	normalizedJob := normalizeToken(workload)
+	if normalizedJob == "" {
+		return false
+	}
+	for _, filter := range filters {
+		normFilter := normalizeToken(filter)
+		if normFilter == "" {
+			continue
+		}
+		if strings.Contains(normalizedJob, normFilter) || strings.Contains(normFilter, normalizedJob) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesBudgetRanges(job *JobRecord, ranges []NumericRange) bool {
+	if len(ranges) == 0 {
+		return true
+	}
+	if job.Budget == nil || job.Budget.FixedAmount == nil {
+		return false
+	}
+	amount := *job.Budget.FixedAmount
+	for _, r := range ranges {
+		if r.contains(amount) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesHourlyRanges(job *JobRecord, ranges []NumericRange) bool {
+	if len(ranges) == 0 {
+		return true
+	}
+	if job.HourlyInfo == nil {
+		return false
+	}
+	var minPtr, maxPtr *float64
+	if job.HourlyInfo.Min != nil {
+		minCopy := *job.HourlyInfo.Min
+		minPtr = &minCopy
+	}
+	if job.HourlyInfo.Max != nil {
+		maxCopy := *job.HourlyInfo.Max
+		maxPtr = &maxCopy
+	}
+	if minPtr == nil && maxPtr == nil {
+		return false
+	}
+	if minPtr == nil {
+		minPtr = maxPtr
+	}
+	if maxPtr == nil {
+		maxPtr = minPtr
+	}
+	minVal := *minPtr
+	maxVal := *maxPtr
+	if minVal > maxVal {
+		minVal, maxVal = maxVal, minVal
+	}
+	for _, r := range ranges {
+		if overlapsFloatRange(minVal, maxVal, r) {
+			return true
+		}
+	}
+	return false
+}
+
+func overlapsFloatRange(minVal, maxVal float64, r NumericRange) bool {
+	if r.Min != nil && maxVal < *r.Min {
+		return false
+	}
+	if r.Max != nil && minVal > *r.Max {
+		return false
+	}
+	return true
+}
+
+func intRangeContains(value int, ranges []IntRange) bool {
+	for _, r := range ranges {
+		if r.contains(value) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesLocationFilters(job *JobRecord, filters []string) bool {
+	if len(filters) == 0 {
+		return true
+	}
+	for _, filter := range filters {
+		if matchSingleLocation(job, filter) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchSingleLocation(job *JobRecord, filter string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(filter))
+	if normalized == "" {
+		return true
+	}
+	timezones := collectJobTimezones(job)
+	countries := collectJobCountries(job)
+
+	switch normalized {
+	case "africa":
+		if hasTimezonePrefix(timezones, "africa/") {
+			return true
+		}
+	case "europe":
+		if hasTimezonePrefix(timezones, "europe/") {
+			return true
+		}
+	case "caribbean":
+		for _, country := range countries {
+			if _, ok := caribbeanCountrySet[country]; ok {
+				return true
+			}
+		}
+	default:
+		for _, country := range countries {
+			if strings.EqualFold(country, normalized) {
+				return true
+			}
+		}
+	}
+
+	for _, tz := range timezones {
+		if strings.EqualFold(tz, normalized) || strings.Contains(tz, normalized) {
+			return true
+		}
+	}
+
+	if normalized == "caribbean" {
+		for _, tz := range timezones {
+			if strings.HasPrefix(tz, "america/") {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func matchesTimezoneFilters(job *JobRecord, filters []string) bool {
+	if len(filters) == 0 {
+		return true
+	}
+	timezones := collectJobTimezones(job)
+	if len(timezones) == 0 {
+		return false
+	}
+	for _, filter := range filters {
+		norm := strings.ToLower(strings.TrimSpace(filter))
+		for _, tz := range timezones {
+			if strings.EqualFold(tz, norm) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func matchesPreviousClients(job *JobRecord, criteria string) bool {
+	norm := strings.ToLower(strings.TrimSpace(criteria))
+	if norm == "" || norm == "all" {
+		return true
+	}
+	if job.Buyer == nil {
+		return false
+	}
+	total := 0
+	if job.Buyer.TotalJobsWithHires != nil {
+		total = *job.Buyer.TotalJobsWithHires
+	} else if job.Buyer.TotalAssignments != nil {
+		total = *job.Buyer.TotalAssignments
+	}
+	switch norm {
+	case "no", "none", "new", "firsttime", "zero":
+		return total == 0
+	case "yes", "previous", "existing", "returning":
+		return total > 0
+	default:
+		return true
+	}
+}
+
+func collectJobTimezones(job *JobRecord) []string {
+	result := []string{}
+	if job.Location != nil && job.Location.Timezone != "" {
+		result = append(result, strings.ToLower(job.Location.Timezone))
+	}
+	if job.Buyer != nil && job.Buyer.Timezone != "" {
+		result = append(result, strings.ToLower(job.Buyer.Timezone))
+	}
+	return result
+}
+
+func collectJobCountries(job *JobRecord) []string {
+	result := []string{}
+	if job.Location != nil && job.Location.Country != "" {
+		result = append(result, strings.ToLower(job.Location.Country))
+	}
+	if job.Buyer != nil && job.Buyer.Country != "" {
+		result = append(result, strings.ToLower(job.Buyer.Country))
+	}
+	return result
+}
+
+func hasTimezonePrefix(timezones []string, prefix string) bool {
+	for _, tz := range timezones {
+		if strings.HasPrefix(tz, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeToken(value string) string {
+	if value == "" {
+		return ""
+	}
+	var builder strings.Builder
+	for _, r := range strings.ToLower(value) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			builder.WriteRune(r)
+		}
+	}
+	return builder.String()
+}
+
+var caribbeanCountrySet = map[string]struct{}{
+	"ag": {}, "antiguaandbarbuda": {},
+	"ai": {}, "anguilla": {},
+	"aw": {}, "aruba": {},
+	"bs": {}, "bahamas": {},
+	"bb": {}, "barbados": {},
+	"bz": {}, "belize": {},
+	"vg": {}, "britishvirginislands": {},
+	"ky": {}, "caymanislands": {},
+	"cu": {}, "cuba": {},
+	"dm": {}, "dominica": {},
+	"do": {}, "dominicanrepublic": {},
+	"gd": {}, "grenada": {},
+	"gp": {}, "guadeloupe": {},
+	"ht": {}, "haiti": {},
+	"jm": {}, "jamaica": {},
+	"mq": {}, "martinique": {},
+	"ms": {}, "montserrat": {},
+	"pr": {}, "puertorico": {},
+	"kn": {}, "saintkittsandnevis": {},
+	"lc": {}, "saintlucia": {},
+	"mf": {}, "saintmartin": {},
+	"vc": {}, "saintvincentandthegrenadines": {},
+	"tt": {}, "trinidadandtobago": {},
+	"tc": {}, "turksandcaicosislands": {},
+	"vi": {}, "usvirginislands": {},
+	"sx": {}, "sintmaarten": {},
 }
 
 func sortJobs(jobs []JobRecord, opts FilterOptions) {

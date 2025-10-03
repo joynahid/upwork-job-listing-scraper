@@ -211,20 +211,7 @@ func (s *Server) handleHealth(c *gin.Context) {
 // @Description Retrieve normalized job documents with optional filters.
 // @Tags jobs
 // @Produce json
-// @Param limit query int false "Number of records (1-50)"
-// @Param payment_verified query bool false "Filter by payment verification"
-// @Param category query string false "Filter by category slug"
-// @Param category_group query string false "Filter by category group slug"
-// @Param status query string false "Filter by job status (open|closed or numeric code)"
-// @Param job_type query string false "Filter by job type (hourly|fixed-price or numeric code)"
-// @Param contractor_tier query string false "Filter by contractor tier (entry|intermediate|expert or numeric code)"
-// @Param country query string false "Filter by buyer country"
-// @Param tags query string false "Comma-separated required tags"
-// @Param posted_after query string false "ISO timestamp lower bound"
-// @Param posted_before query string false "ISO timestamp upper bound"
-// @Param budget_min query number false "Minimum fixed budget"
-// @Param budget_max query number false "Maximum fixed budget"
-// @Param sort query string false "Sort mode (posted_on_asc, posted_on_desc, last_visited_asc, last_visited_desc)"
+// @Param upwork_url query string true "Full Upwork job search URL to translate into filters"
 // @Success 200 {object} JobsResponse
 // @Failure 400 {object} JobsResponse
 // @Failure 401 {object} JobsResponse
@@ -473,6 +460,10 @@ func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]Jo
 		for _, rec := range records {
 			job := rec
 			if !applyFilters(&job, opts) {
+				continue
+			}
+
+			if opts.SearchExpression != nil && !matchesSearchExpression(&job, opts.SearchExpression) {
 				continue
 			}
 

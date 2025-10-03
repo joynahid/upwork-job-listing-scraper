@@ -16,6 +16,7 @@ class ActorConfig:
     
     def __init__(self, actor_input: Optional[Dict[str, Any]] = None):
         """Initialize configuration from environment variables and actor input."""
+        self._has_actor_input = actor_input is not None
         self.actor_input = actor_input or {}
         
         # Environment variables
@@ -27,39 +28,36 @@ class ActorConfig:
         self.upwork_url = self.actor_input.get("upworkUrl", "")
         self.max_jobs = self.actor_input.get("maxJobs", 20)
         
-        # Parse Upwork URL to extract filters
-        self.filters = self._parse_upwork_url()
-    
-    def _parse_upwork_url(self) -> Dict[str, Any]:
-        """
-        Parse Upwork URL and extract filters in Go API format.
-        
-        Returns:
-            Dictionary of filters formatted for Go API
-        """
+        # Build request payload for the Go API
+        self.filters = self._build_request_payload()
+
+    def _build_request_payload(self) -> Dict[str, Any]:
+        """Build the request payload expected by the Go API."""
         if not self.upwork_url:
-            if self.debug_mode:
-                Actor.log.warning("⚠️ No Upwork URL provided, using default filters")
             return {}
-        
-        try:
-            filters = UpworkURLParser.parse_url(self.upwork_url)
-            if self.debug_mode:
-                Actor.log.info(f"✅ Parsed {len(filters)} filters from URL")
-            return filters
-        except Exception as e:
-            Actor.log.error(f"❌ Failed to parse Upwork URL: {e}")
-            return {}
+
+        if self.debug_mode:
+            try:
+                parsed_filters = UpworkURLParser.parse_url(self.upwork_url)
+                Actor.log.info(
+                    f"✅ Parsed Upwork URL into {len(parsed_filters)} derived filters"
+                )
+                Actor.log.debug(f"   Derived filters: {parsed_filters}")
+            except Exception as exc:  # pragma: no cover - best effort logging
+                Actor.log.warning(f"⚠️ Unable to parse Upwork URL for diagnostics: {exc}")
+
+        return {"upwork_url": self.upwork_url}
     
     def validate(self) -> bool:
         """Validate required configuration."""
         if not self.api_key:
             Actor.log.error("❌ API key is required")
             return False
-        
-        if not self.upwork_url:
-            Actor.log.warning("⚠️ No Upwork URL provided - will fetch jobs without filters")
-        
+
+        if self._has_actor_input and not self.upwork_url:
+            Actor.log.error("❌ Upwork URL is required")
+            return False
+
         return True
     
     def log_config(self) -> None:
@@ -70,4 +68,4 @@ class ActorConfig:
         Actor.log.info(f"   Debug Mode: {self.debug_mode}")
         
         if self.debug_mode:
-            Actor.log.info(f"   Parsed Filters: {self.filters}")
+            Actor.log.info(f"   Request Payload: {self.filters}")

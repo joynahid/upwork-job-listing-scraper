@@ -40,21 +40,19 @@ class UpworkJobAPIWrapper:
             httpx.HTTPError: If API request fails
         """
         jobs_url = f"{self.api_endpoint}/jobs"
-        params = {"limit": max_jobs} if max_jobs else {}
-        
-        # Add filters to params if provided
-        # Filters are already in Go API format from the URL parser
+        params: Dict[str, Any] = {}
+
+        upwork_url = None
         if filters:
-            for filter_key, filter_value in filters.items():
-                if filter_value is not None:
-                    # Handle comma-separated values
-                    if isinstance(filter_value, list):
-                        params[filter_key] = ",".join(str(item) for item in filter_value)
-                    else:
-                        params[filter_key] = filter_value
+            upwork_url = filters.get("upwork_url")
+
+        if not upwork_url:
+            raise ValueError("upwork_url is required to fetch jobs from the API")
+
+        params["upwork_url"] = upwork_url
 
         if self.debug_mode:
-            Actor.log.info(f"🔍 Fetching jobs from: {jobs_url} (limit: {max_jobs})")
+            Actor.log.info(f"🔍 Fetching jobs from: {jobs_url} (max local limit: {max_jobs})")
             if params:
                 Actor.log.info(f"🎯 Parameters: {params}")
 

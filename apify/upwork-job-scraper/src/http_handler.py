@@ -66,16 +66,27 @@ class UpworkJobStandbyHandler(BaseHTTPRequestHandler):
             }
 
             self._send_json_response(200, response_data)
-                
-        except Exception as e:
-            Actor.log.error(f"❌ Error handling HTTP request: {e}")
-            
+
+        except ValueError as e:
+            Actor.log.warning(f"⚠️ Bad request: {e}")
+
             error_response = {
                 "success": False,
                 "error": str(e),
                 "error_type": type(e).__name__
             }
-            
+
+            self._send_json_response(400, error_response)
+
+        except Exception as e:
+            Actor.log.error(f"❌ Error handling HTTP request: {e}")
+
+            error_response = {
+                "success": False,
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
+
             self._send_json_response(500, error_response)
     
     def _send_response(self, status_code: int, content_type: str, content: bytes) -> None:
