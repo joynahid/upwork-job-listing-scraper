@@ -29,8 +29,8 @@ const (
 	requestTimeout = 20 * time.Second
 
 	// Cache TTLs
-	jobsCacheTTL    = 5 * time.Minute
-	jobListCacheTTL = 5 * time.Minute
+	jobsCacheTTL    = 5 * time.Second
+	jobListCacheTTL = 5 * time.Second
 )
 
 type Server struct {
