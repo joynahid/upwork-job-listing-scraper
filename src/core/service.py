@@ -213,11 +213,51 @@ class UpworkJobService:
 
     async def save_job_listing_details(self, job: dict) -> None:
         """Save the job details."""
-        await self.job_list_db.document(job["uid"]).set(job, merge=True)
+        job_uid = job.get("uid")
+        if not job_uid:
+            logger.error(
+                "Skipping job listing save; missing uid. Payload=%s",
+                self._serialize_for_logging(job),
+            )
+            return
+
+        logger.info(
+            "Saving job listing to Firestore: uid=%s payload=%s",
+            job_uid,
+            self._serialize_for_logging(job),
+        )
+        await self.job_list_db.document(job_uid).set(job, merge=True)
 
     async def save_individual_job_details(self, job: dict) -> None:
         """Save the individual job details."""
-        await self.individual_job_db.document(job["uid"]).set(job, merge=True)
+        job_uid = job.get("uid")
+        if not job_uid:
+            logger.error(
+                "Skipping individual job save; missing uid. Payload=%s",
+                self._serialize_for_logging(job),
+            )
+            return
+
+        logger.info(
+            "Saving individual job to Firestore: uid=%s payload=%s",
+            job_uid,
+            self._serialize_for_logging(job),
+        )
+        await self.individual_job_db.document(job_uid).set(job, merge=True)
+
+    @staticmethod
+    def _serialize_for_logging(payload: Any) -> str:
+        """Return a compact, truncated JSON string for logging Firestore payloads."""
+        try:
+            serialized = json.dumps(payload, default=str)
+        except (TypeError, ValueError):
+            serialized = repr(payload)
+
+        max_length = 1500
+        if len(serialized) > max_length:
+            serialized = f"{serialized[:max_length]}... (truncated)"
+
+        return serialized
 
     async def _process_search_url(self, url: str) -> None:
         """Process a single Upwork search page with Botasaurus."""
