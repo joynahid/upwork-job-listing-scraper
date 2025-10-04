@@ -47,7 +47,6 @@ func main() {
 	log.Printf("📡 Gin server listening on port %s", port)
 	log.Printf("Endpoints:")
 	log.Printf("  GET    /jobs                      - Firestore-filtered jobs (requires X-API-KEY)")
-	log.Printf("  GET    /job-list                  - Job summaries (requires X-API-KEY)")
 	log.Printf("  GET    /health                    - Health check (requires X-API-KEY)")
 	log.Printf("  POST   /api-keys/refresh-cache    - Refresh API keys cache (requires X-API-KEY)")
 	log.Printf("  DELETE /api-keys/{key}/cache      - Clear specific API key cache (requires X-API-KEY)")

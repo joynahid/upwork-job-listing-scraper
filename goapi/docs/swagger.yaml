@@ -157,21 +157,6 @@ definitions:
       workload:
         type: string
     type: object
-  server.JobListResponse:
-    properties:
-      count:
-        type: integer
-      data:
-        items:
-          $ref: '#/definitions/server.JobSummaryDTO'
-        type: array
-      last_updated:
-        type: string
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
   server.JobLocation:
     properties:
       city:
@@ -195,76 +180,6 @@ definitions:
         type: boolean
       should_have_portfolio:
         type: boolean
-    type: object
-  server.JobSummaryClient:
-    properties:
-      country:
-        type: string
-      payment_verified:
-        type: boolean
-    type: object
-  server.JobSummaryDTO:
-    properties:
-      ciphertext:
-        type: string
-      client:
-        $ref: '#/definitions/server.JobSummaryClient'
-      description:
-        type: string
-      duration_label:
-        type: string
-      engagement:
-        type: string
-      fixed_budget:
-        $ref: '#/definitions/server.BudgetInfo'
-      hide_budget:
-        type: boolean
-      hourly_budget:
-        $ref: '#/definitions/server.HourlyBudget'
-      id:
-        type: string
-      is_contract_to_hire:
-        type: boolean
-      job_type:
-        type: string
-      last_visited_at:
-        type: string
-      number_of_positions:
-        type: integer
-      occupations:
-        items:
-          type: string
-        type: array
-      premium:
-        type: boolean
-      proposals_tier:
-        type: string
-      publish_time_relative:
-        type: string
-      published_on:
-        type: string
-      qualifications:
-        $ref: '#/definitions/server.JobQualifications'
-      recno:
-        type: integer
-      renewed_on:
-        type: string
-      skills:
-        items:
-          type: string
-        type: array
-      title:
-        type: string
-      url:
-        type: string
-      was_renewed:
-        type: boolean
-      weekly_budget:
-        $ref: '#/definitions/server.BudgetInfo'
-      weekly_retainer_budget:
-        $ref: '#/definitions/server.BudgetInfo'
-      workload:
-        type: string
     type: object
   server.JobsResponse:
     properties:
@@ -409,84 +324,6 @@ paths:
       summary: Health check
       tags:
       - health
-  /job-list:
-    get:
-      description: Retrieve Upwork job summaries from the job_list collection with
-        optional filters.
-      parameters:
-      - description: Number of records (1-50)
-        in: query
-        name: limit
-        type: integer
-      - description: Filter by client payment verification
-        in: query
-        name: payment_verified
-        type: boolean
-      - description: Filter by client country
-        in: query
-        name: country
-        type: string
-      - description: Comma-separated list of required skill labels
-        in: query
-        name: skills
-        type: string
-      - description: Filter by job type (hourly|fixed-price or numeric code)
-        in: query
-        name: job_type
-        type: string
-      - description: Filter by duration label
-        in: query
-        name: duration
-        type: string
-      - description: Minimum hourly budget
-        in: query
-        name: hourly_min
-        type: number
-      - description: Maximum hourly budget
-        in: query
-        name: hourly_max
-        type: number
-      - description: Minimum fixed budget
-        in: query
-        name: budget_min
-        type: number
-      - description: Maximum fixed budget
-        in: query
-        name: budget_max
-        type: number
-      - description: Case-insensitive search term for title or description
-        in: query
-        name: search
-        type: string
-      - description: Sort mode (published_on_asc, published_on_desc, last_visited_asc,
-          last_visited_desc)
-        in: query
-        name: sort
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/server.JobListResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/server.JobListResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/server.JobListResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/server.JobListResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: List job summaries
-      tags:
-      - job-list
   /jobs:
     get:
       description: Retrieve normalized job documents with optional filters.

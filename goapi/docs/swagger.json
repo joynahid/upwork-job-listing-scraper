@@ -1,459 +1,6 @@
 {
-    "schemes": [
-        "http",
-        "https"
-    ],
-    "swagger": "2.0",
-    "info": {
-        "description": "API for accessing normalized Upwork job listings with advanced filtering capabilities. All endpoints require authentication via X-API-KEY header.",
-        "title": "Upwork Job API",
-        "contact": {
-            "name": "API Support",
-            "email": "support@upworkjobapi.com"
-        },
-        "version": "1.0"
-    },
-    "host": "localhost:8080",
-    "paths": {
-        "/api-keys/refresh-cache": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Forces a refresh of the API keys cache from Firestore",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "api-keys"
-                ],
-                "summary": "Refresh API keys cache",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api-keys/{key}/cache": {
-            "delete": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Removes a specific API key from the cache",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "api-keys"
-                ],
-                "summary": "Clear API key cache",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "API key to clear from cache",
-                        "name": "key",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/cache/clear": {
-            "delete": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Removes all cached responses (does not affect API key cache)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cache"
-                ],
-                "summary": "Clear all response caches",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/cache/stats": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns cache hit/miss ratio and performance metrics",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cache"
-                ],
-                "summary": "Get cache statistics",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/health": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Returns a 200 response when the API is up.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Health check",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/job-list": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Retrieve Upwork job summaries from the job_list collection with optional filters.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "job-list"
-                ],
-                "summary": "List job summaries",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Number of records (1-50)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Filter by client payment verification",
-                        "name": "payment_verified",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by client country",
-                        "name": "country",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Comma-separated list of required skill labels",
-                        "name": "skills",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by job type (hourly|fixed-price or numeric code)",
-                        "name": "job_type",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by duration label",
-                        "name": "duration",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Minimum hourly budget",
-                        "name": "hourly_min",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Maximum hourly budget",
-                        "name": "hourly_max",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Minimum fixed budget",
-                        "name": "budget_min",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Maximum fixed budget",
-                        "name": "budget_max",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Case-insensitive search term for title or description",
-                        "name": "search",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Sort mode (published_on_asc, published_on_desc, last_visited_asc, last_visited_desc)",
-                        "name": "sort",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobListResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobListResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobListResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/jobs": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Retrieve normalized job documents with optional filters.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "jobs"
-                ],
-                "summary": "List jobs",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Number of records (1-50)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "boolean",
-                        "description": "Filter by payment verification",
-                        "name": "payment_verified",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by category slug",
-                        "name": "category",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by category group slug",
-                        "name": "category_group",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by job status (open|closed or numeric code)",
-                        "name": "status",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by job type (hourly|fixed-price or numeric code)",
-                        "name": "job_type",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by contractor tier (entry|intermediate|expert or numeric code)",
-                        "name": "contractor_tier",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by buyer country",
-                        "name": "country",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Comma-separated required tags",
-                        "name": "tags",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ISO timestamp lower bound",
-                        "name": "posted_after",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ISO timestamp upper bound",
-                        "name": "posted_before",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Minimum fixed budget",
-                        "name": "budget_min",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Maximum fixed budget",
-                        "name": "budget_max",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Sort mode (posted_on_asc, posted_on_desc, last_visited_asc, last_visited_desc)",
-                        "name": "sort",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/server.JobsResponse"
-                        }
-                    }
-                }
-            }
-        }
-    },
     "definitions": {
         "server.BudgetInfo": {
-            "type": "object",
             "properties": {
                 "currency": {
                     "type": "string"
@@ -461,10 +8,10 @@
                 "fixed_amount": {
                     "type": "number"
                 }
-            }
+            },
+            "type": "object"
         },
         "server.BuyerDTO": {
-            "type": "object",
             "properties": {
                 "active_assignments": {
                     "type": "integer"
@@ -511,10 +58,10 @@
                 "total_spent": {
                     "type": "number"
                 }
-            }
+            },
+            "type": "object"
         },
         "server.CategoryInfo": {
-            "type": "object",
             "properties": {
                 "group": {
                     "type": "string"
@@ -528,10 +75,10 @@
                 "slug": {
                     "type": "string"
                 }
-            }
+            },
+            "type": "object"
         },
         "server.ClientActivity": {
-            "type": "object",
             "properties": {
                 "invitations_sent": {
                     "type": "integer"
@@ -551,10 +98,10 @@
                 "unanswered_invites": {
                     "type": "integer"
                 }
-            }
+            },
+            "type": "object"
         },
         "server.HourlyBudget": {
-            "type": "object",
             "properties": {
                 "currency": {
                     "type": "string"
@@ -565,10 +112,10 @@
                 "min": {
                     "type": "number"
                 }
-            }
+            },
+            "type": "object"
         },
         "server.JobDTO": {
-            "type": "object",
             "properties": {
                 "budget": {
                     "$ref": "#/definitions/server.BudgetInfo"
@@ -628,10 +175,10 @@
                     "type": "integer"
                 },
                 "occupations": {
-                    "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "type": "array"
                 },
                 "posted_on": {
                     "type": "string"
@@ -658,19 +205,19 @@
                     "type": "integer"
                 },
                 "skills": {
-                    "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "type": "array"
                 },
                 "status": {
                     "type": "string"
                 },
                 "tags": {
-                    "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "type": "array"
                 },
                 "tier_text": {
                     "type": "string"
@@ -690,33 +237,10 @@
                 "workload": {
                     "type": "string"
                 }
-            }
-        },
-        "server.JobListResponse": {
-            "type": "object",
-            "properties": {
-                "count": {
-                    "type": "integer"
-                },
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/server.JobSummaryDTO"
-                    }
-                },
-                "last_updated": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
+            },
+            "type": "object"
         },
         "server.JobLocation": {
-            "type": "object",
             "properties": {
                 "city": {
                     "type": "string"
@@ -727,10 +251,10 @@
                 "timezone": {
                     "type": "string"
                 }
-            }
+            },
+            "type": "object"
         },
         "server.JobQualifications": {
-            "type": "object",
             "properties": {
                 "min_hours_week": {
                     "type": "number"
@@ -750,125 +274,19 @@
                 "should_have_portfolio": {
                     "type": "boolean"
                 }
-            }
-        },
-        "server.JobSummaryClient": {
-            "type": "object",
-            "properties": {
-                "country": {
-                    "type": "string"
-                },
-                "payment_verified": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "server.JobSummaryDTO": {
-            "type": "object",
-            "properties": {
-                "ciphertext": {
-                    "type": "string"
-                },
-                "client": {
-                    "$ref": "#/definitions/server.JobSummaryClient"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "duration_label": {
-                    "type": "string"
-                },
-                "engagement": {
-                    "type": "string"
-                },
-                "fixed_budget": {
-                    "$ref": "#/definitions/server.BudgetInfo"
-                },
-                "hide_budget": {
-                    "type": "boolean"
-                },
-                "hourly_budget": {
-                    "$ref": "#/definitions/server.HourlyBudget"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "is_contract_to_hire": {
-                    "type": "boolean"
-                },
-                "job_type": {
-                    "type": "string"
-                },
-                "last_visited_at": {
-                    "type": "string"
-                },
-                "number_of_positions": {
-                    "type": "integer"
-                },
-                "occupations": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "premium": {
-                    "type": "boolean"
-                },
-                "proposals_tier": {
-                    "type": "string"
-                },
-                "publish_time_relative": {
-                    "type": "string"
-                },
-                "published_on": {
-                    "type": "string"
-                },
-                "qualifications": {
-                    "$ref": "#/definitions/server.JobQualifications"
-                },
-                "recno": {
-                    "type": "integer"
-                },
-                "renewed_on": {
-                    "type": "string"
-                },
-                "skills": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "title": {
-                    "type": "string"
-                },
-                "url": {
-                    "type": "string"
-                },
-                "was_renewed": {
-                    "type": "boolean"
-                },
-                "weekly_budget": {
-                    "$ref": "#/definitions/server.BudgetInfo"
-                },
-                "weekly_retainer_budget": {
-                    "$ref": "#/definitions/server.BudgetInfo"
-                },
-                "workload": {
-                    "type": "string"
-                }
-            }
+            },
+            "type": "object"
         },
         "server.JobsResponse": {
-            "type": "object",
             "properties": {
                 "count": {
                     "type": "integer"
                 },
                 "data": {
-                    "type": "array",
                     "items": {
                         "$ref": "#/definitions/server.JobDTO"
-                    }
+                    },
+                    "type": "array"
                 },
                 "last_updated": {
                     "type": "string"
@@ -879,14 +297,350 @@
                 "success": {
                     "type": "boolean"
                 }
+            },
+            "type": "object"
+        }
+    },
+    "host": "localhost:8080",
+    "info": {
+        "contact": {
+            "email": "support@upworkjobapi.com",
+            "name": "API Support"
+        },
+        "description": "API for accessing normalized Upwork job listings with advanced filtering capabilities. All endpoints require authentication via X-API-KEY header.",
+        "title": "Upwork Job API",
+        "version": "1.0"
+    },
+    "paths": {
+        "/api-keys/refresh-cache": {
+            "post": {
+                "description": "Forces a refresh of the API keys cache from Firestore",
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Refresh API keys cache",
+                "tags": [
+                    "api-keys"
+                ]
+            }
+        },
+        "/api-keys/{key}/cache": {
+            "delete": {
+                "description": "Removes a specific API key from the cache",
+                "parameters": [
+                    {
+                        "description": "API key to clear from cache",
+                        "in": "path",
+                        "name": "key",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Clear API key cache",
+                "tags": [
+                    "api-keys"
+                ]
+            }
+        },
+        "/cache/clear": {
+            "delete": {
+                "description": "Removes all cached responses (does not affect API key cache)",
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Clear all response caches",
+                "tags": [
+                    "cache"
+                ]
+            }
+        },
+        "/cache/stats": {
+            "get": {
+                "description": "Returns cache hit/miss ratio and performance metrics",
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "additionalProperties": true,
+                            "type": "object"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Get cache statistics",
+                "tags": [
+                    "cache"
+                ]
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Returns a 200 response when the API is up.",
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "Health check",
+                "tags": [
+                    "health"
+                ]
+            }
+        },
+        "/jobs": {
+            "get": {
+                "description": "Retrieve normalized job documents with optional filters.",
+                "parameters": [
+                    {
+                        "description": "Number of records (1-50)",
+                        "in": "query",
+                        "name": "limit",
+                        "type": "integer"
+                    },
+                    {
+                        "description": "Filter by payment verification",
+                        "in": "query",
+                        "name": "payment_verified",
+                        "type": "boolean"
+                    },
+                    {
+                        "description": "Filter by category slug",
+                        "in": "query",
+                        "name": "category",
+                        "type": "string"
+                    },
+                    {
+                        "description": "Filter by category group slug",
+                        "in": "query",
+                        "name": "category_group",
+                        "type": "string"
+                    },
+                    {
+                        "description": "Filter by job status (open|closed or numeric code)",
+                        "in": "query",
+                        "name": "status",
+                        "type": "string"
+                    },
+                    {
+                        "description": "Filter by job type (hourly|fixed-price or numeric code)",
+                        "in": "query",
+                        "name": "job_type",
+                        "type": "string"
+                    },
+                    {
+                        "description": "Filter by contractor tier (entry|intermediate|expert or numeric code)",
+                        "in": "query",
+                        "name": "contractor_tier",
+                        "type": "string"
+                    },
+                    {
+                        "description": "Filter by buyer country",
+                        "in": "query",
+                        "name": "country",
+                        "type": "string"
+                    },
+                    {
+                        "description": "Comma-separated required tags",
+                        "in": "query",
+                        "name": "tags",
+                        "type": "string"
+                    },
+                    {
+                        "description": "ISO timestamp lower bound",
+                        "in": "query",
+                        "name": "posted_after",
+                        "type": "string"
+                    },
+                    {
+                        "description": "ISO timestamp upper bound",
+                        "in": "query",
+                        "name": "posted_before",
+                        "type": "string"
+                    },
+                    {
+                        "description": "Minimum fixed budget",
+                        "in": "query",
+                        "name": "budget_min",
+                        "type": "number"
+                    },
+                    {
+                        "description": "Maximum fixed budget",
+                        "in": "query",
+                        "name": "budget_max",
+                        "type": "number"
+                    },
+                    {
+                        "description": "Sort mode (posted_on_asc, posted_on_desc, last_visited_asc, last_visited_desc)",
+                        "in": "query",
+                        "name": "sort",
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/server.JobsResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "summary": "List jobs",
+                "tags": [
+                    "jobs"
+                ]
             }
         }
     },
+    "schemes": [
+        "http",
+        "https"
+    ],
     "securityDefinitions": {
         "ApiKeyAuth": {
-            "type": "apiKey",
+            "in": "header",
             "name": "X-API-KEY",
-            "in": "header"
+            "type": "apiKey"
         }
-    }
+    },
+    "swagger": "2.0"
 }

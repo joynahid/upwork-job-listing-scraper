@@ -31,22 +31,6 @@ type JobsQueryParams struct {
 	derivedParams url.Values `form:"-"`
 }
 
-// JobListQueryParams defines the validated query parameters for /job-list endpoint
-type JobListQueryParams struct {
-	Limit           int     `form:"limit" binding:"omitempty,min=1,max=50"`
-	PaymentVerified *bool   `form:"payment_verified" binding:"omitempty"`
-	Country         string  `form:"country" binding:"omitempty,iso3166_1_alpha2|iso3166_1_alpha3"`
-	Skills          string  `form:"skills" binding:"omitempty,max=500"`
-	JobType         string  `form:"job_type" binding:"omitempty,job_type_enum"`
-	Duration        string  `form:"duration" binding:"omitempty,max=100"`
-	HourlyMin       float64 `form:"hourly_min" binding:"omitempty,min=0"`
-	HourlyMax       float64 `form:"hourly_max" binding:"omitempty,min=0,gtefield=HourlyMin"`
-	BudgetMin       float64 `form:"budget_min" binding:"omitempty,min=0"`
-	BudgetMax       float64 `form:"budget_max" binding:"omitempty,min=0,gtefield=BudgetMin"`
-	Search          string  `form:"search" binding:"omitempty,max=500"`
-	Sort            string  `form:"sort" binding:"omitempty,sort_field"`
-}
-
 // RegisterCustomValidators registers custom validators with gin's validator
 func RegisterCustomValidators(v *validator.Validate) {
 	v.RegisterValidation("job_type_enum", validateJobType)
@@ -298,17 +282,6 @@ func ValidateAndBindJobsQuery(c *gin.Context) (*JobsQueryParams, error) {
 	return &params, nil
 }
 
-// ValidateAndBindJobListQuery validates and binds the job-list query parameters
-func ValidateAndBindJobListQuery(c *gin.Context) (*JobListQueryParams, error) {
-	var params JobListQueryParams
-
-	if err := c.ShouldBindQuery(&params); err != nil {
-		return nil, err
-	}
-
-	return &params, nil
-}
-
 // convertToFilterOptions converts validated JobsQueryParams to internal FilterOptions
 func convertToFilterOptions(params *JobsQueryParams) (FilterOptions, error) {
 	combined := url.Values{}
@@ -332,79 +305,5 @@ func convertToFilterOptions(params *JobsQueryParams) (FilterOptions, error) {
 		return opts, err
 	}
 	opts.UpworkURL = strings.TrimSpace(params.UpworkURL)
-	return opts, nil
-}
-
-// convertToJobListFilterOptions converts validated JobListQueryParams to internal JobListFilterOptions
-func convertToJobListFilterOptions(params *JobListQueryParams) (JobListFilterOptions, error) {
-	opts := JobListFilterOptions{
-		Limit:         defaultLimit,
-		SortField:     SortLastVisited,
-		SortAscending: false,
-	}
-
-	if params.Limit > 0 {
-		opts.Limit = params.Limit
-	}
-
-	opts.PaymentVerified = params.PaymentVerified
-	opts.Country = strings.TrimSpace(params.Country)
-
-	// Parse skills
-	if params.Skills != "" {
-		tokens := strings.Split(params.Skills, ",")
-		for _, token := range tokens {
-			trimmed := strings.TrimSpace(token)
-			if trimmed != "" {
-				opts.Skills = append(opts.Skills, trimmed)
-			}
-		}
-	}
-
-	// Parse job_type
-	if params.JobType != "" {
-		parsed, err := parseEnumFilterValue(params.JobType, "job_type", jobTypeCodeFromLabel, jobTypeAcceptedLabels())
-		if err != nil {
-			return opts, err
-		}
-		opts.JobType = parsed
-	}
-
-	opts.Duration = strings.TrimSpace(params.Duration)
-
-	if params.HourlyMin > 0 {
-		opts.MinHourly = &params.HourlyMin
-	}
-	if params.HourlyMax > 0 {
-		opts.MaxHourly = &params.HourlyMax
-	}
-	if params.BudgetMin > 0 {
-		opts.BudgetMin = &params.BudgetMin
-	}
-	if params.BudgetMax > 0 {
-		opts.BudgetMax = &params.BudgetMax
-	}
-
-	opts.Search = strings.TrimSpace(params.Search)
-
-	// Parse sort
-	if params.Sort != "" {
-		sortLower := strings.ToLower(strings.TrimSpace(params.Sort))
-		switch sortLower {
-		case "publish_time_asc", "published_on_asc":
-			opts.SortField = SortPublishTime
-			opts.SortAscending = true
-		case "publish_time_desc", "published_on_desc":
-			opts.SortField = SortPublishTime
-			opts.SortAscending = false
-		case "last_visited_asc":
-			opts.SortField = SortLastVisited
-			opts.SortAscending = true
-		case "last_visited_desc":
-			opts.SortField = SortLastVisited
-			opts.SortAscending = false
-		}
-	}
-
 	return opts, nil
 }

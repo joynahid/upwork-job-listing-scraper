@@ -29,19 +29,17 @@ const (
 	requestTimeout = 20 * time.Second
 
 	// Cache TTLs
-	jobsCacheTTL    = 5 * time.Second
-	jobListCacheTTL = 5 * time.Second
+	jobsCacheTTL = 5 * time.Second
 )
 
 type Server struct {
-	rootCtx           context.Context
-	cancelRoot        context.CancelFunc
-	client            *firestore.Client
-	redisClient       *RedisClient
-	apiKeyService     *APIKeyService
-	collectionName    string
-	jobListCollection string
-	apiKey            string // Legacy API key for backward compatibility
+	rootCtx        context.Context
+	cancelRoot     context.CancelFunc
+	client         *firestore.Client
+	redisClient    *RedisClient
+	apiKeyService  *APIKeyService
+	collectionName string
+	apiKey         string // Legacy API key for backward compatibility
 }
 
 // NewServer creates a server with Firestore client and configuration.
@@ -65,11 +63,6 @@ func NewServer() (*Server, error) {
 		collectionName = "individual_jobs"
 	}
 
-	jobListCollection := os.Getenv("FIRESTORE_JOB_LIST_COLLECTION")
-	if jobListCollection == "" {
-		jobListCollection = "job_list"
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	client, err := firestore.NewClient(ctx, projectID, option.WithCredentialsFile(serviceAccountPath))
 	if err != nil {
@@ -77,7 +70,7 @@ func NewServer() (*Server, error) {
 		return nil, fmt.Errorf("failed to create Firestore client: %w", err)
 	}
 
-	log.Printf("🔥 Firestore client initialized: project=%s, collections=%s,%s", projectID, collectionName, jobListCollection)
+	log.Printf("🔥 Firestore client initialized: project=%s, collection=%s", projectID, collectionName)
 
 	// Initialize Redis client
 	redisClient, err := NewRedisClient()
@@ -91,14 +84,13 @@ func NewServer() (*Server, error) {
 	apiKeyService := NewAPIKeyService(client, redisClient)
 
 	return &Server{
-		rootCtx:           ctx,
-		cancelRoot:        cancel,
-		client:            client,
-		redisClient:       redisClient,
-		apiKeyService:     apiKeyService,
-		collectionName:    collectionName,
-		jobListCollection: jobListCollection,
-		apiKey:            apiKey,
+		rootCtx:        ctx,
+		cancelRoot:     cancel,
+		client:         client,
+		redisClient:    redisClient,
+		apiKeyService:  apiKeyService,
+		collectionName: collectionName,
+		apiKey:         apiKey,
 	}, nil
 }
 
@@ -131,7 +123,6 @@ func (s *Server) Router() *gin.Engine {
 	group.Use(s.authMiddleware())
 	group.GET("/health", s.handleHealth)
 	group.GET("/jobs", s.handleJobs)
-	group.GET("/job-list", s.handleJobList)
 
 	// API key management endpoints
 	group.POST("/api-keys/refresh-cache", s.handleRefreshAPIKeysCache)
@@ -280,91 +271,6 @@ func (s *Server) handleJobs(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// handleJobList returns job_list entries with optional filtering.
-// @Summary List job summaries
-// @Description Retrieve Upwork job summaries from the job_list collection with optional filters.
-// @Tags job-list
-// @Produce json
-// @Param limit query int false "Number of records (1-50)"
-// @Param payment_verified query bool false "Filter by client payment verification"
-// @Param country query string false "Filter by client country"
-// @Param skills query string false "Comma-separated list of required skill labels"
-// @Param job_type query string false "Filter by job type (hourly|fixed-price or numeric code)"
-// @Param duration query string false "Filter by duration label"
-// @Param hourly_min query number false "Minimum hourly budget"
-// @Param hourly_max query number false "Maximum hourly budget"
-// @Param budget_min query number false "Minimum fixed budget"
-// @Param budget_max query number false "Maximum fixed budget"
-// @Param search query string false "Case-insensitive search term for title or description"
-// @Param sort query string false "Sort mode (published_on_asc, published_on_desc, last_visited_asc, last_visited_desc)"
-// @Success 200 {object} JobListResponse
-// @Failure 400 {object} JobListResponse
-// @Failure 401 {object} JobListResponse
-// @Failure 500 {object} JobListResponse
-// @Security ApiKeyAuth
-// @Router /job-list [get]
-func (s *Server) handleJobList(c *gin.Context) {
-	// Validate query parameters
-	queryParams, err := ValidateAndBindJobListQuery(c)
-	if err != nil {
-		validationResp := FormatValidationErrors(err)
-		c.JSON(http.StatusBadRequest, validationResp)
-		return
-	}
-
-	// Generate cache key from query parameters
-	cacheKey := generateCacheKey("job-list", c.Request.URL.Query())
-
-	// Try to get from cache
-	var cachedResponse JobListResponse
-	if err := s.redisClient.Get(c.Request.Context(), cacheKey, &cachedResponse); err == nil {
-		s.redisClient.Incr(c.Request.Context(), "cache:stats:hits")
-		log.Printf("💚 Cache HIT for /job-list (key: %s)", cacheKey[len(cacheKey)-16:])
-		c.JSON(http.StatusOK, cachedResponse)
-		return
-	}
-
-	// Cache miss - query Firestore
-	s.redisClient.Incr(c.Request.Context(), "cache:stats:misses")
-	log.Printf("💔 Cache MISS for /job-list (key: %s)", cacheKey[len(cacheKey)-16:])
-
-	// Convert validated params to JobListFilterOptions
-	opts, err := convertToJobListFilterOptions(queryParams)
-	if err != nil {
-		respondError(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	log.Printf("🎯 Job list filter options: %s", formatJobListFilterOptions(opts))
-
-	jobs, err := s.queryJobList(c.Request.Context(), opts)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	dtos := make([]JobSummaryDTO, 0, len(jobs))
-	for _, job := range jobs {
-		dtos = append(dtos, job.ToDTO())
-	}
-
-	response := JobListResponse{
-		Success:     true,
-		Data:        dtos,
-		Count:       len(dtos),
-		LastUpdated: time.Now().UTC().Format(time.RFC3339),
-	}
-
-	// Cache the response
-	if err := s.redisClient.Set(c.Request.Context(), cacheKey, response, jobListCacheTTL); err != nil {
-		log.Printf("⚠️ Failed to cache response: %v", err)
-	} else {
-		log.Printf("💾 Cached response for %v", jobListCacheTTL)
-	}
-
-	c.JSON(http.StatusOK, response)
-}
-
 func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]JobRecord, error) {
 	ctx := s.rootCtx
 	if requestCtx != nil {
@@ -484,105 +390,6 @@ func (s *Server) queryJobs(requestCtx context.Context, opts FilterOptions) ([]Jo
 		}
 		results = results[opts.Offset:]
 	}
-	if len(results) > opts.Limit {
-		results = results[:opts.Limit]
-	}
-
-	return results, nil
-}
-
-func (s *Server) queryJobList(requestCtx context.Context, opts JobListFilterOptions) ([]JobSummaryRecord, error) {
-	ctx := s.rootCtx
-	if requestCtx != nil {
-		if deadline, ok := requestCtx.Deadline(); ok {
-			remaining := time.Until(deadline)
-			if remaining > 0 && remaining < requestTimeout {
-				var cancel context.CancelFunc
-				ctx, cancel = context.WithTimeout(s.rootCtx, remaining)
-				defer cancel()
-			}
-		}
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
-	defer cancel()
-
-	// Build Firestore query with native ordering
-	query := s.client.Collection(s.jobListCollection).Query
-
-	// Use Firestore native ordering - publishedOn and last_visited_at are at root level
-	var orderField string
-	var orderDir firestore.Direction
-
-	switch opts.SortField {
-	case SortPublishTime:
-		orderField = "publishedOn"
-		if opts.SortAscending {
-			orderDir = firestore.Asc
-		} else {
-			orderDir = firestore.Desc
-		}
-	case SortLastVisited:
-		orderField = "scrape_metadata.last_visited_at"
-		if opts.SortAscending {
-			orderDir = firestore.Asc
-		} else {
-			orderDir = firestore.Desc
-		}
-	default:
-		// Default to last_visited_at descending
-		orderField = "scrape_metadata.last_visited_at"
-		orderDir = firestore.Desc
-	}
-
-	query = query.OrderBy(orderField, orderDir)
-
-	// With native ordering, fetch 2-3x limit to account for filtering
-	fetchLimit := opts.Limit * 3
-	if fetchLimit < 100 {
-		fetchLimit = 100
-	}
-	if fetchLimit > 500 {
-		fetchLimit = 500
-	}
-
-	query = query.Limit(fetchLimit)
-
-	iter := query.Documents(ctx)
-	defer iter.Stop()
-
-	results := make([]JobSummaryRecord, 0, opts.Limit)
-	docCount := 0
-
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			if isContextCanceled(err) {
-				return nil, fmt.Errorf("firestore query cancelled: %w", err)
-			}
-			return nil, fmt.Errorf("firestore query failed: %w", err)
-		}
-		docCount++
-
-		record, err := transformJobListDocument(doc)
-		if err != nil {
-			log.Printf("Skipping job_list document %s: %v", doc.Ref.ID, err)
-			continue
-		}
-
-		if !applyJobListFilters(record, opts) {
-			continue
-		}
-
-		results = append(results, *record)
-	}
-
-	log.Printf("📊 Fetched %d docs from Firestore (ordered by %s %v), filtered to %d results", docCount, orderField, orderDir, len(results))
-
-	// Results are already ordered by Firestore, just apply limit
 	if len(results) > opts.Limit {
 		results = results[:opts.Limit]
 	}
