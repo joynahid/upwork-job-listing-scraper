@@ -18,9 +18,7 @@ from botasaurus_driver.driver import Tab
 from botasaurus_driver.exceptions import CloudflareDetectionException
 from botasaurus_driver import Driver
 from bs4 import BeautifulSoup
-from google.cloud import firestore
-
-from src.firebase_provider import get_firebase_with_config
+from src.core.api_client import UpworkJobAPIClient
 from ..schemas.input import ActorInput
 
 logger = logging.getLogger(__name__)
@@ -49,9 +47,8 @@ class UpworkJobService:
             else default_profile
         ).resolve()
         self.browser_profile_path.mkdir(parents=True, exist_ok=True)
-        self.firebase = get_firebase_with_config(
-            service_account_path=os.environ["FIREBASE_SERVICE_ACCOUNT_PATH"],
-        )
+        self.api_client = UpworkJobAPIClient()
+        self._job_batch: list[dict] = []  # Batch jobs for efficient API posting
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -62,14 +59,6 @@ class UpworkJobService:
         """Async context manager exit."""
         await self.cleanup()
         return False  # Don't suppress exceptions
-
-    @property
-    def job_list_db(self) -> firestore.AsyncCollectionReference:
-        return self.firebase.firestore.collection("job_list")
-
-    @property
-    def individual_job_db(self) -> firestore.AsyncCollectionReference:
-        return self.firebase.firestore.collection("individual_jobs")
 
     @property
     def total_jobs_processed(self) -> int:
@@ -211,39 +200,56 @@ class UpworkJobService:
         ciphertext = job["ciphertext"]
         return f"https://www.upwork.com/jobs/{ciphertext}?referrer_url_path=%2Fnx%2Fsearch%2Fjobs%2Fdetails%2F{ciphertext}"
 
-    async def save_job_listing_details(self, job: dict) -> None:
-        """Save the job details."""
-        job_uid = job.get("uid")
+    async def save_job_to_batch(self, job: dict) -> None:
+        """Add job to batch for later API submission."""
+        job_uid = job.get("uid") or job.get("ciphertext") or job.get("id")
         if not job_uid:
             logger.error(
-                "Skipping job listing save; missing uid. Payload=%s",
+                "Skipping job; missing uid/ciphertext/id. Payload=%s",
                 self._serialize_for_logging(job),
             )
             return
 
-        logger.info(
-            "Saving job listing to Firestore: uid=%s payload=%s",
+        logger.debug(
+            "Adding job to batch: uid=%s payload=%s",
             job_uid,
             self._serialize_for_logging(job),
         )
-        await self.job_list_db.document(job_uid).set(job, merge=True)
+
+        self._job_batch.append(job)
+
+        # Auto-flush batch when it reaches 10 jobs
+        if len(self._job_batch) >= 10:
+            await self.flush_job_batch()
+
+    async def flush_job_batch(self) -> None:
+        """Send batched jobs to the API."""
+        if not self._job_batch:
+            return
+
+        batch_size = len(self._job_batch)
+        logger.info("Flushing batch of %d jobs to API", batch_size)
+
+        try:
+            result = await self.api_client.ingest_jobs(self._job_batch)
+            if result.get("success"):
+                logger.info("✅ Successfully ingested %d jobs", result.get("count", batch_size))
+            else:
+                logger.error("❌ API ingestion failed: %s", result.get("message"))
+        except Exception as e:
+            logger.error("Failed to send jobs to API: %s", str(e))
+            raise
+        finally:
+            self._job_batch.clear()
+
+    # Legacy method names for backward compatibility (redirect to new batch method)
+    async def save_job_listing_details(self, job: dict) -> None:
+        """Save the job details (redirects to batch)."""
+        await self.save_job_to_batch(job)
 
     async def save_individual_job_details(self, job: dict) -> None:
-        """Save the individual job details."""
-        job_uid = job.get("uid")
-        if not job_uid:
-            logger.error(
-                "Skipping individual job save; missing uid. Payload=%s",
-                self._serialize_for_logging(job),
-            )
-            return
-
-        logger.info(
-            "Saving individual job to Firestore: uid=%s payload=%s",
-            job_uid,
-            self._serialize_for_logging(job),
-        )
-        await self.individual_job_db.document(job_uid).set(job, merge=True)
+        """Save the individual job details (redirects to batch)."""
+        await self.save_job_to_batch(job)
 
     @staticmethod
     def _serialize_for_logging(payload: Any) -> str:
@@ -281,11 +287,47 @@ class UpworkJobService:
         job_list = self._extract_job_urls_from_page()
         logger.info("Extracted %s job URLs from search page", len(job_list))
 
+        # Save job_list collection
         for job in job_list:
             await self.save_job_listing_details(job)
 
-        # Process each job URL to get comprehensive data with immediate tab cleanup per job
-        await self._process_job_urls_individually(job_list)
+        # Primary approach: Use search page data directly (faster, no page visits needed)
+        # Fallback: If extract_details is enabled, visit individual pages
+        if not self.config.extract_details:
+            logger.info("Using search page data directly (extract_details=False)")
+            # Save raw search data - Go API will transform it
+            for job in job_list:
+                # Save raw job data with minimal wrapping
+                # Go API's transform.go will handle the transformation
+                individual_job = job.copy()
+                individual_job["url"] = self.gen_job_url(job)
+                individual_job["scrape_metadata"] = {
+                    "last_visited_at": datetime.now(timezone.utc).isoformat(),
+                    "last_visited_by": "upwork_scraper",
+                    "source": "search_page",
+                }
+
+                # Flatten key timestamp fields for Firestore ordering
+                # These are needed for sorting queries to work
+                if "publishedOn" in job and job["publishedOn"]:
+                    individual_job["publishTime"] = job["publishedOn"]
+                if "createdOn" in job and job["createdOn"]:
+                    individual_job["createdOn"] = job["createdOn"]
+                if "amount" in job and isinstance(job["amount"], dict) and "amount" in job["amount"]:
+                    individual_job["budgetAmount"] = job["amount"]["amount"]
+
+                await self.save_individual_job_details(individual_job)
+                self._total_jobs_processed += 1
+                logger.info(f"💾 Saved to Firestore: {job.get('title', 'Unknown')} (Job #{self._total_jobs_processed})")
+
+            logger.info(
+                "🏁 Scraping session complete! Total: %s jobs saved to Firestore",
+                self.total_jobs_processed,
+            )
+        else:
+            logger.info("Extracting details from individual job pages (extract_details=True)")
+            # Fallback: Visit individual job pages (slower but may get additional data in future)
+            await self._process_job_urls_individually(job_list)
 
         await self._apply_random_delay()
 
@@ -462,6 +504,17 @@ class UpworkJobService:
             detailed_job = self.extract_nuxt_with_js_engine(self.driver.page_html)
             current_url = self.driver.current_url
 
+            # Debug: Log what we extracted
+            if detailed_job:
+                logger.debug(f"✅ Extracted NUXT data keys: {list(detailed_job.keys())}")
+                if 'state' in detailed_job:
+                    logger.debug(f"   State keys: {list(detailed_job['state'].keys())}")
+                else:
+                    logger.warning(f"⚠️ No 'state' key in extracted data for {job_title}")
+                    logger.debug(f"   Full extracted data: {json.dumps(detailed_job, default=str)[:500]}")
+            else:
+                logger.error(f"❌ extract_nuxt_with_js_engine returned None for {job_title}")
+
             return detailed_job, current_url
 
     async def _extract_and_push_comprehensive_job_from_tab(
@@ -576,14 +629,75 @@ class UpworkJobService:
             logger.debug(f"Failed to flatten sortable fields: {exc}")
 
     @staticmethod
+    def _flatten_sortable_fields_from_search_data(job_data: dict) -> None:
+        """
+        Flatten key fields from search page data structure to root level for Firestore ordering.
+        Works with nested state.jobDetails.job structure.
+        Modifies job_data in place.
+        """
+        try:
+            # Extract the job object from nested structure
+            job_obj = job_data.get("state", {}).get("jobDetails", {}).get("job", {})
+            if not job_obj:
+                logger.debug("No job object found in state.jobDetails")
+                return
+
+            # Flatten publishedOn to publishTime (most important for sorting)
+            if "publishedOn" in job_obj and job_obj["publishedOn"]:
+                job_data["publishTime"] = job_obj["publishedOn"]
+
+            # Flatten postedOn
+            if "postedOn" in job_obj and job_obj["postedOn"]:
+                job_data["postedOn"] = job_obj["postedOn"]
+
+            # Flatten createdOn
+            if "createdOn" in job_obj and job_obj["createdOn"]:
+                job_data["createdOn"] = job_obj["createdOn"]
+
+            # Flatten budget for potential budget sorting
+            if "amount" in job_obj and job_obj["amount"]:
+                amount = job_obj["amount"]
+                if isinstance(amount, dict) and "amount" in amount:
+                    job_data["budgetAmount"] = amount["amount"]
+
+            # Flatten hourly budget for sorting (if exists in search data)
+            if "hourlyBudgetMax" in job_obj:
+                job_data["hourlyBudgetMax"] = job_obj["hourlyBudgetMax"]
+            if "hourlyBudgetMin" in job_obj:
+                job_data["hourlyBudgetMin"] = job_obj["hourlyBudgetMin"]
+
+        except Exception as exc:
+            logger.debug(f"Failed to flatten sortable fields from search data: {exc}")
+
+    @staticmethod
     def extract_nuxt_with_js_engine(html: str) -> dict | None:
         """
-        Extract NUXT data using Node.js as a lightweight JS engine
+        Extract NUXT data from new __NUXT_DATA__ JSON format or legacy window.__NUXT__
         """
 
         soup = BeautifulSoup(html, "html.parser")
 
-        # Find the script tag containing window.__NUXT__
+        # First, try the new __NUXT_DATA__ format (script with id="__NUXT_DATA__")
+        nuxt_data_script = soup.find("script", {"id": "__NUXT_DATA__", "type": "application/json"})
+        if nuxt_data_script and nuxt_data_script.string:
+            try:
+                # Parse the JSON array
+                nuxt_array = json.loads(nuxt_data_script.string)
+                logger.debug(f"Found __NUXT_DATA__ with {len(nuxt_array)} elements")
+
+                # The data is in a flattened array format
+                # We need to reconstruct it into a usable object
+                # The structure typically has indices pointing to other parts of the array
+
+                # For now, just return the raw array wrapped in a dict
+                # The calling code will need to handle this structure
+                return {"_nuxt_data_array": nuxt_array, "_format": "array"}
+
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse __NUXT_DATA__ JSON: {e}")
+                # Fall through to try legacy format
+
+        # Fallback to legacy window.__NUXT__ format
         script_tags = soup.find_all("script")
         for script in script_tags:
             if script.string and "window.__NUXT__" in script.string:
@@ -593,10 +707,10 @@ class UpworkJobService:
                 js_code = f"""
                 // Create window object
                 var window = {{}};
-                
+
                 // Execute the original script
                 {script_content}
-                
+
                 // Output the result as JSON
                 console.log(JSON.stringify(window.__NUXT__));
                 """
@@ -623,21 +737,22 @@ class UpworkJobService:
 
                     # Parse the JSON output
                     nuxt_data = json.loads(result.stdout.strip())
+                    nuxt_data["_format"] = "legacy"
                     return nuxt_data
 
                 except subprocess.CalledProcessError as e:
-                    print(f"Node.js execution error: {e}")
-                    print(f"stderr: {e.stderr}")
+                    logger.error(f"Node.js execution error: {e}")
+                    logger.error(f"stderr: {e.stderr}")
                     return None
                 except json.JSONDecodeError as e:
-                    print(f"JSON decode error: {e}")
-                    print(f"stdout: {result.stdout[:200]}...")
+                    logger.error(f"JSON decode error: {e}")
+                    logger.error(f"stdout: {result.stdout[:200]}...")
                     return None
                 finally:
                     # Clean up temp file
                     os.unlink(temp_file_path)
 
-        print("No window.__NUXT__ section found")
+        logger.warning("No NUXT data found (neither __NUXT_DATA__ nor window.__NUXT__)")
         return None
 
     def _extract_job_urls_from_page(self) -> list[dict]:
@@ -682,7 +797,21 @@ class UpworkJobService:
 
         logger.info("Starting service cleanup...")
 
-        # Step 1: Close browser tabs and driver
+        # Step 1: Flush any remaining jobs in the batch
+        try:
+            logger.info("Flushing remaining jobs in batch...")
+            await self.flush_job_batch()
+        except Exception as batch_exc:
+            logger.error("Batch flush error during cleanup: %s", batch_exc)
+
+        # Step 2: Close API client
+        try:
+            logger.info("Closing API client...")
+            await self.api_client.close()
+        except Exception as api_exc:
+            logger.error("API client cleanup error: %s", api_exc)
+
+        # Step 3: Close browser tabs and driver
         if self.driver:
             try:
                 logger.info("Attempting to close Botasaurus driver...")
