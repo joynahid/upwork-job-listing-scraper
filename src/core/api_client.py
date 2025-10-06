@@ -14,8 +14,8 @@ class UpworkJobAPIClient:
 
     def __init__(self):
         """Initialize API client with configuration from environment."""
-        self.base_url = os.getenv("UPWORK_API_URL", "http://upwork-job-api:8080")
-        self.api_key = os.getenv("API_KEY")
+        self.base_url = os.getenv("UPWORK_API_URL", "https://upworkapi.upfindr.app")
+        self.api_key = os.getenv("API_KEY", "5d1bc44510881442")
 
         if not self.api_key:
             raise ValueError("API_KEY environment variable is required")
