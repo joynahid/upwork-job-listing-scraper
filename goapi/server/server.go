@@ -124,6 +124,9 @@ func (s *Server) Router() *gin.Engine {
 	group.GET("/health", s.handleHealth)
 	group.GET("/jobs", s.handleJobs)
 
+	// Scraper ingestion endpoint
+	group.POST("/ingest/jobs", s.handleIngestJobs)
+
 	// API key management endpoints
 	group.POST("/api-keys/refresh-cache", s.handleRefreshAPIKeysCache)
 	group.DELETE("/api-keys/:key/cache", s.handleClearAPIKeyCache)
@@ -506,6 +509,132 @@ func (s *Server) handleClearCache(c *gin.Context) {
 		Message:     fmt.Sprintf("Cleared %d cache entries", count),
 		LastUpdated: time.Now().UTC().Format(time.RFC3339),
 	})
+}
+
+// handleIngestJobs accepts scraped job data from the Python scraper
+// @Summary Ingest scraped jobs
+// @Description Accepts an array of scraped job data and saves to Firestore
+// @Tags ingestion
+// @Accept json
+// @Produce json
+// @Param jobs body []map[string]interface{} true "Array of scraped job objects"
+// @Success 200 {object} JobsResponse
+// @Failure 400 {object} JobsResponse
+// @Failure 401 {object} JobsResponse
+// @Failure 500 {object} JobsResponse
+// @Security ApiKeyAuth
+// @Router /ingest/jobs [post]
+func (s *Server) handleIngestJobs(c *gin.Context) {
+	var jobs []map[string]interface{}
+	if err := c.ShouldBindJSON(&jobs); err != nil {
+		respondError(c, http.StatusBadRequest, fmt.Sprintf("Invalid JSON: %v", err))
+		return
+	}
+
+	if len(jobs) == 0 {
+		respondError(c, http.StatusBadRequest, "Empty jobs array")
+		return
+	}
+
+	log.Printf("📥 Received %d jobs for ingestion", len(jobs))
+
+	ctx, cancel := context.WithTimeout(s.rootCtx, 60*time.Second)
+	defer cancel()
+
+	// Get collection names from environment or use defaults
+	individualJobsCollection := os.Getenv("FIRESTORE_COLLECTION")
+	if individualJobsCollection == "" {
+		individualJobsCollection = "individual_jobs"
+	}
+	jobListCollection := os.Getenv("FIRESTORE_JOB_LIST_COLLECTION")
+	if jobListCollection == "" {
+		jobListCollection = "job_list"
+	}
+
+	savedCount := 0
+	errorCount := 0
+	errors := make([]string, 0)
+
+	for i, job := range jobs {
+		// Extract job UID - try multiple fields
+		var uid string
+		if uidVal, ok := job["uid"].(string); ok && uidVal != "" {
+			uid = uidVal
+		} else if ciphertext, ok := job["ciphertext"].(string); ok && ciphertext != "" {
+			uid = ciphertext
+		} else if id, ok := job["id"].(string); ok && id != "" {
+			uid = id
+		}
+
+		if uid == "" {
+			errorMsg := fmt.Sprintf("Job %d missing uid/ciphertext/id", i)
+			log.Printf("⚠️ %s", errorMsg)
+			errors = append(errors, errorMsg)
+			errorCount++
+			continue
+		}
+
+		// Save to individual_jobs collection
+		individualRef := s.client.Collection(individualJobsCollection).Doc(uid)
+		if _, err := individualRef.Set(ctx, job); err != nil {
+			errorMsg := fmt.Sprintf("Failed to save job %s to %s: %v", uid, individualJobsCollection, err)
+			log.Printf("❌ %s", errorMsg)
+			errors = append(errors, errorMsg)
+			errorCount++
+			continue
+		}
+
+		// Create summary version for job_list collection
+		summary := map[string]interface{}{
+			"uid":         uid,
+			"updated_at":  time.Now().UTC(),
+			"source":      "scraper_api_ingest",
+		}
+
+		// Copy key summary fields if they exist
+		summaryFields := []string{
+			"title", "publishTime", "publishedOn", "createdOn",
+			"budgetAmount", "amount", "client", "buyer",
+			"skills", "duration", "workload", "experienceLevel",
+			"tier", "contractorTier", "type", "url",
+		}
+		for _, field := range summaryFields {
+			if val, ok := job[field]; ok {
+				summary[field] = val
+			}
+		}
+
+		// Save to job_list collection
+		jobListRef := s.client.Collection(jobListCollection).Doc(uid)
+		if _, err := jobListRef.Set(ctx, summary); err != nil {
+			log.Printf("⚠️ Failed to save job %s to %s: %v (non-fatal)", uid, jobListCollection, err)
+		}
+
+		savedCount++
+		if savedCount%10 == 0 {
+			log.Printf("📊 Progress: %d/%d jobs saved", savedCount, len(jobs))
+		}
+	}
+
+	log.Printf("✅ Ingestion complete: %d saved, %d errors", savedCount, errorCount)
+
+	message := fmt.Sprintf("Ingested %d jobs successfully", savedCount)
+	if errorCount > 0 {
+		message = fmt.Sprintf("Ingested %d jobs with %d errors", savedCount, errorCount)
+		// Log errors for debugging
+		for _, errMsg := range errors {
+			log.Printf("  - %s", errMsg)
+		}
+	}
+
+	response := JobsResponse{
+		Success:     savedCount > 0,
+		Message:     message,
+		Count:       savedCount,
+		LastUpdated: time.Now().UTC().Format(time.RFC3339),
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func respondError(c *gin.Context, status int, message string) {

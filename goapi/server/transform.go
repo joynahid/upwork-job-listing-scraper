@@ -30,11 +30,24 @@ func debugTransformDocument(doc *firestore.DocumentSnapshot) ([]JobRecord, error
 		return nil, fmt.Errorf("empty document data")
 	}
 
+	// Check if this is new flat structure from search page (no state key)
 	stateMap := getMap(raw, "state")
 	if stateMap == nil {
-		return nil, fmt.Errorf("missing state data")
+		// New flat structure - job data is at root level
+		if isValidJobMap(raw) {
+			// Extract buyer info from "client" field (search page uses "client" instead of "buyer")
+			buyerMap := getMap(raw, "client")
+
+			rec := buildJobRecord(raw, buyerMap, raw, doc.Ref.ID, false, "")
+			if rec == nil || rec.ID == "" {
+				return nil, fmt.Errorf("failed to build job record from flat structure")
+			}
+			return []JobRecord{*rec}, nil
+		}
+		return nil, fmt.Errorf("missing state data and not valid flat structure")
 	}
 
+	// Legacy nested structure handling
 	jobState := getMap(stateMap, "job")
 	isPrivate, privacyReason := detectPrivacy(jobState)
 
@@ -154,8 +167,10 @@ func buildJobRecord(jobMap map[string]interface{}, buyerMap map[string]interface
 	tags, _ := extractStringSlice(jobMap, "annotations", "tags")
 	skills := extractSkillLabels(jobMap, "ontologySkills")
 
+	// Extract timestamp - try multiple fields (search page uses publishedOn)
 	postedOn := firstTime(jobMap,
 		[]string{"postedOn"},
+		[]string{"publishedOn"},
 		[]string{"publishTime"},
 		[]string{"createdOn"},
 	)
@@ -367,7 +382,10 @@ func buildBuyer(buyer map[string]interface{}) *BuyerInfo {
 
 	info := &BuyerInfo{}
 
+	// Handle both isPaymentMethodVerified and isPaymentVerified
 	if val, ok := extractBool(buyer, "isPaymentMethodVerified"); ok {
+		info.PaymentVerified = &val
+	} else if val, ok := extractBool(buyer, "isPaymentVerified"); ok {
 		info.PaymentVerified = &val
 	}
 
@@ -383,6 +401,7 @@ func buildBuyer(buyer map[string]interface{}) *BuyerInfo {
 		}
 	}
 
+	// Handle nested stats structure (old format)
 	if stats := getMap(buyer, "stats"); stats != nil {
 		if spentMap := getMap(stats, "totalCharges"); spentMap != nil {
 			if amount, ok := extractFloat(spentMap, "amount"); ok {
@@ -405,6 +424,34 @@ func buildBuyer(buyer map[string]interface{}) *BuyerInfo {
 			info.TotalHours = ptrFloat(val)
 		}
 		if val, ok := extractFloat(stats, "score"); ok {
+			info.Score = ptrFloat(val)
+		}
+	} else {
+		// Handle flat structure from search page (new format)
+		if val, ok := extractFloat(buyer, "totalSpent"); ok {
+			info.TotalSpent = ptrFloat(val)
+		}
+		if val, ok := extractInt(buyer, "totalAssignments"); ok {
+			info.TotalAssignments = &val
+		}
+		if val, ok := extractInt(buyer, "totalJobsWithHires"); ok {
+			info.TotalJobsWithHires = &val
+		} else if val, ok := extractInt(buyer, "totalReviews"); ok {
+			// Search page uses totalReviews
+			info.TotalJobsWithHires = &val
+		}
+		if val, ok := extractInt(buyer, "activeAssignments"); ok {
+			info.ActiveAssignments = &val
+		}
+		if val, ok := extractInt(buyer, "feedbackCount"); ok {
+			info.FeedbackCount = &val
+		} else if val, ok := extractInt(buyer, "totalFeedback"); ok {
+			info.FeedbackCount = &val
+		}
+		if val, ok := extractFloat(buyer, "totalHours"); ok {
+			info.TotalHours = ptrFloat(val)
+		}
+		if val, ok := extractFloat(buyer, "score"); ok {
 			info.Score = ptrFloat(val)
 		}
 	}
